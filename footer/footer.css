@@ -1,0 +1,160 @@
+/* ===== IMPORT FONT BONA NOVA ===== */
+@import url('https://fonts.googleapis.com/css2?family=Bona+Nova:ital,wght@0,400;0,700;1,400&display=swap');
+
+/* ===== FOOTER STYLES (dùng chung, đồng bộ với header) ===== */
+
+.footer {
+    background: var(--green-dark, #008919);
+    color: rgba(255, 255, 255, 0.8);
+    padding: 48px 0 24px;
+    border-radius: 40px 40px 0 0;
+    margin-top: 40px;
+}
+
+.footer-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 40px;
+    margin-bottom: 32px;
+}
+
+/* ===== Brand ===== */
+.footer-brand h3 {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.footer-brand h3 i {
+    color: var(--orange, #FF0090);
+    font-size: 1.8rem;
+}
+
+/* Logo DOTIFOOD với Bona Nova Bold, gradient trắng → hồng */
+.footer-logo-text {
+    font-family: 'Bona Nova', 'Georgia', serif;
+    font-weight: 700; /* Bold */
+    font-size: 1.6rem;
+    letter-spacing: -0.5px;
+    background: linear-gradient(135deg, #ffffff 0%, #FF0090 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.footer-brand p {
+    max-width: 280px;
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.7);
+    line-height: 1.6;
+}
+
+/* ===== Social ===== */
+.footer-social {
+    display: flex;
+    gap: 14px;
+    margin-top: 12px;
+}
+.footer-social a {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition, 0.3s ease);
+    color: #fff;
+    font-size: 1.1rem;
+    text-decoration: none;
+}
+.footer-social a:hover {
+    background: var(--orange, #FF0090);
+    transform: translateY(-3px);
+}
+
+/* ===== Columns ===== */
+.footer-col h4 {
+    color: #fff;
+    font-weight: 600;
+    margin-bottom: 12px;
+    font-size: 1rem;
+}
+.footer-col ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.footer-col ul li {
+    margin-bottom: 8px;
+}
+.footer-col ul li a {
+    transition: var(--transition, 0.3s ease);
+    font-size: 0.92rem;
+    color: rgba(255, 255, 255, 0.7);
+    text-decoration: none;
+}
+.footer-col ul li a:hover {
+    color: var(--orange-light, #ff66b2);
+    padding-left: 4px;
+}
+
+/* Icon trong cột Liên hệ */
+.footer-col ul li i {
+    color: var(--orange, #FF0090);
+    width: 20px;
+    margin-right: 6px;
+}
+
+/* ===== Bottom ===== */
+.footer-bottom {
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding-top: 20px;
+    text-align: center;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 992px) {
+    .footer-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 28px;
+    }
+}
+
+@media (max-width: 768px) {
+    .footer-grid {
+        grid-template-columns: 1fr;
+        gap: 24px;
+    }
+    .footer-brand p {
+        max-width: 100%;
+    }
+    .footer {
+        border-radius: 20px 20px 0 0;
+        padding: 32px 0 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .footer {
+        padding: 24px 0 16px;
+        margin-top: 24px;
+    }
+    .footer-brand h3 {
+        font-size: 1.3rem;
+    }
+    .footer-logo-text {
+        font-size: 1.3rem;
+    }
+    .footer-social a {
+        width: 36px;
+        height: 36px;
+        font-size: 1rem;
+    }
+}
