@@ -10,16 +10,28 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 $user_id = $_SESSION['user_id'];
-$product_id = isset($_POST['product_id']) ? (int)$_POST['product_id'] : 0;
+
+// LẤY TRỰC TIẾP product_id DƯỚI DẠNG CHUỖI, KHÔNG ÉP SỐ
+$product_id = isset($_POST['product_id']) ? trim($_POST['product_id']) : '';
 $quantity = isset($_POST['quantity']) ? (int)$_POST['quantity'] : 1;
 
-if ($product_id <= 0) {
-    echo json_encode(['success' => false, 'message' => 'ID sản phẩm không hợp lệ']);
+if (empty($product_id)) {
+    echo json_encode(['success' => false, 'message' => 'ID sản phẩm không hợp lệ (rỗng)']);
     exit;
 }
 
 try {
-    // Lấy giỏ hàng đang hoạt động
+    // Kiểm tra tồn kho - sử dụng WHERE MaSanPham = :product_id (chuỗi)
+    $stmt = $pdo->prepare("SELECT SoLuongTon FROM khohang WHERE MaSanPham = ?");
+    $stmt->execute([$product_id]);
+    $stock = $stmt->fetchColumn();
+    if ($stock === false) $stock = 0;
+    if ($stock <= 0) {
+        echo json_encode(['success' => false, 'message' => 'Sản phẩm đã hết hàng']);
+        exit;
+    }
+
+    // Lấy giỏ hàng
     $stmt = $pdo->prepare("SELECT MaGioHang FROM giohang WHERE MaNguoiDung = ? AND TrangThai = 0");
     $stmt->execute([$user_id]);
     $cart = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -38,6 +50,10 @@ try {
 
     if ($existing) {
         $newQty = $existing['SoLuong'] + $quantity;
+        if ($newQty > $stock) {
+            echo json_encode(['success' => false, 'message' => 'Số lượng vượt quá tồn kho']);
+            exit;
+        }
         $stmt = $pdo->prepare("UPDATE giohang_chitiet SET SoLuong = ? WHERE MaGioHang = ? AND MaSanPham = ?");
         $stmt->execute([$newQty, $cart_id, $product_id]);
     } else {

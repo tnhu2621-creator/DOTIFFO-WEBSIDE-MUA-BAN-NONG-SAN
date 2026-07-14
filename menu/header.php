@@ -4,24 +4,15 @@ session_start();
 
 // --- Xử lý đăng xuất ---
 if (isset($_GET['logout'])) {
-    // Xóa toàn bộ session data
     $_SESSION = array();
-    // Nếu có cookie session, xóa nó
     if (ini_get("session.use_cookies")) {
         $params = session_get_cookie_params();
-        setcookie(
-            session_name(),
-            '',
-            time() - 42000,
-            $params["path"],
-            $params["domain"],
-            $params["secure"],
-            $params["httponly"]
+        setcookie(session_name(), '', time() - 42000,
+            $params["path"], $params["domain"],
+            $params["secure"], $params["httponly"]
         );
     }
-    // Hủy session
     session_destroy();
-    // Chuyển hướng về trang đăng nhập
     header('Location: Dangnhap.php');
     exit();
 }
@@ -35,6 +26,7 @@ if ($isLoggedIn) {
     $userName = $_SESSION['user_name'] ?? 'Tài khoản';
     $userAvatar = $_SESSION['user_avatar'] ?? '';
 
+    // Nếu avatar chưa có trong session, lấy từ DB
     if (empty($userAvatar)) {
         require_once 'config/database.php';
         $stmt = $pdo->prepare("SELECT HinhAnh FROM nguoidung WHERE MaNguoiDung = ?");
@@ -46,6 +38,7 @@ if ($isLoggedIn) {
         }
     }
 
+    // Fallback avatar nếu vẫn trống
     if (empty($userAvatar) || !file_exists($userAvatar)) {
         $userAvatar = 'https://ui-avatars.com/api/?name=' . urlencode($userName) . '&background=008919&color=fff&size=120';
     }
@@ -59,7 +52,7 @@ require_once 'config/database.php';
 
 if ($isLoggedIn) {
     try {
-        // Đếm số sản phẩm khác nhau (không phải tổng số lượng)
+        // Đếm số sản phẩm khác nhau trong giỏ (không tính số lượng)
         $stmt = $pdo->prepare("
             SELECT COUNT(*) as total 
             FROM giohang_chitiet gc 
@@ -70,14 +63,19 @@ if ($isLoggedIn) {
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         $cartCount = $row['total'] ?? 0;
 
+        // Lấy chi tiết giỏ hàng, quan trọng: thêm sp.MaSanPham
         $stmtItems = $pdo->prepare("
-            SELECT sp.TenSanPham AS name, sp.GiaBan AS price, gc.SoLuong AS quantity, CONCAT('images/', sp.HinhAnh) AS icon
+            SELECT 
+                sp.MaSanPham AS MaSanPham,          -- <-- ĐÃ THÊM
+                sp.TenSanPham AS name, 
+                sp.GiaBan AS price, 
+                gc.SoLuong AS quantity, 
+                CONCAT('images/', sp.HinhAnh) AS icon
             FROM giohang_chitiet gc
             JOIN giohang g ON gc.MaGioHang = g.MaGioHang
             JOIN sanpham sp ON gc.MaSanPham = sp.MaSanPham
             WHERE g.MaNguoiDung = ? AND g.TrangThai = 0
         ");
-        
         $stmtItems->execute([$_SESSION['user_id']]);
         $dbCartItems = $stmtItems->fetchAll(PDO::FETCH_ASSOC);
 
@@ -166,7 +164,7 @@ if ($isLoggedIn) {
                 <i class="fas fa-bars"></i>
             </button>
         </div>
- 
+
         <!-- ===== CART SIDEBAR ===== -->
         <div class="cart-overlay" id="cartOverlay"></div>
         <div class="cart-sidebar" id="cartSidebar">
@@ -201,6 +199,7 @@ if ($isLoggedIn) {
     </div>
 </header>
 
+<!-- Truyền dữ liệu giỏ hàng cho JavaScript (bao gồm MaSanPham) -->
 <script>
     const dbCartData = <?= json_encode($dbCartItems) ?>;
 </script>

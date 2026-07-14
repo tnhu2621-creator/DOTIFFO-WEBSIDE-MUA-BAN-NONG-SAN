@@ -140,6 +140,21 @@
     transition: var(--transition, 0.3s ease);
 }
 
+.cart-item.out-of-stock {
+    background: #fff5f5;
+    border-left: 3px solid #dc3545;
+    opacity: 0.7;
+}
+.cart-item.out-of-stock .cart-item-info h4 {
+    color: #dc3545;
+}
+.cart-item .cart-item-qty button:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+
+
 /* ===== USER ACCOUNT ===== */
 .user-account {
     position: relative;
@@ -577,7 +592,6 @@
 }
 
 /* ===== DROPDOWN CHO MENU GIỚI THIỆU ===== */
-/* ===== DROPDOWN CHO MENU GIỚI THIỆU ===== */
 .nav-menu li.dropdown {
     position: relative;
 }
@@ -657,4 +671,68 @@
         padding: 6px 16px;
         font-size: 0.9rem;
     }
+}
+
+/* ===== CHECKBOX TRÒN CHO GIỎ HÀNG ===== */
+.cart-item-check {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+}
+
+.item-checkbox {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid #ccc;
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s ease;
+    background: #fff;
+    flex-shrink: 0;
+}
+
+.item-checkbox:checked {
+    border-color: #FF0090;
+    background: #FF0090;
+}
+
+.item-checkbox:checked::after {
+    content: '✓';
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.item-checkbox:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background: #f0f0f0;
+    border-color: #ddd;
+}
+
+.item-checkbox:disabled:checked {
+    background: #ccc;
+    border-color: #ccc;
+}
+
+.item-checkbox:disabled:checked::after {
+    color: #999;
+}
+
+/* Điều chỉnh lại layout cho cart-item để chứa checkbox */
+.cart-item {
+    display: flex;
+    gap: 10px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--gray-200, #e9e6e0);
+    align-items: center;
 }

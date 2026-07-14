@@ -126,17 +126,14 @@ include 'menu/header.php';
             <div class="product-grid" id="productGrid">
                 <?php if (count($products) > 0): ?>
                     <?php foreach ($products as $product): 
-                        // Bản đồ icon dựa trên mã danh mục mới (DM01, DM02...)
+                        // Bản đồ icon dựa trên mã danh mục
                         $iconMap = [
-                            'DM01' => 'fa-apple-alt',    // Trái cây
-                            'DM02' => 'fa-mug-saucer',   // Trà & Sen
-                            'DM03' => 'fa-seedling'      // Đặc sản
+                            'DM01' => 'fa-apple-alt',
+                            'DM02' => 'fa-mug-saucer',
+                            'DM03' => 'fa-seedling'
                         ];
                         $icon = isset($iconMap[$product['MaDanhMuc']]) ? $iconMap[$product['MaDanhMuc']] : 'fa-box';
-                        
-                        // SỬA LỖI ĐƯỜNG DẪN ẢNH: Nối thêm thư mục chứa ảnh vào trước tên file
-                        // Hãy thay đổi 'images/' thành tên folder chứa ảnh thực tế trong project của bạn
-                        $folderPath = 'images/'; 
+                        $folderPath = 'images/';
                         $imageSrc = $folderPath . $product['HinhAnh'];
                     ?>
                         <div class="product-card" data-category="<?= strtolower($product['MaDanhMuc']) ?>">
@@ -156,10 +153,14 @@ include 'menu/header.php';
                                 <span class="product-rating">★★★★★ <span>(0)</span></span>
                             </div>
                             <div class="product-actions">
-                                <button class="btn-cart" data-id="<?= $product['MaSanPham'] ?>" 
-                                        data-name="<?= htmlspecialchars($product['TenSanPham']) ?>" 
-                                        data-price="<?= $product['GiaBan'] ?>" 
-                                        data-icon="<?= $icon ?>">
+                                <!-- ===== SỬA NÚT THÊM GIỎ: GỌI TRỰC TIẾP addToCart với tham số ===== -->
+                                <button class="btn-cart" 
+                                    onclick="window.addToCart(
+                                        '<?= htmlspecialchars($product['MaSanPham']) ?>',
+                                        '<?= htmlspecialchars(addslashes($product['TenSanPham'])) ?>',
+                                        <?= (int)$product['GiaBan'] ?>,
+                                        '<?= htmlspecialchars($icon) ?>'
+                                    )">
                                     <i class="fas fa-cart-plus"></i> Thêm giỏ
                                 </button>
                                 <button class="btn-wish" title="Yêu thích"><i class="far fa-heart"></i></button>
@@ -190,5 +191,7 @@ include 'menu/header.php';
     </div>
 </section>
 
+<!-- ===== LOẠI BỎ FILE JS KHÔNG CẦN THIẾT, CHỈ GIỮ HEADER.JS ===== -->
 <script src="js/sanphamKH.js"></script>
+
 <?php include 'footer/footer.php'; ?>
