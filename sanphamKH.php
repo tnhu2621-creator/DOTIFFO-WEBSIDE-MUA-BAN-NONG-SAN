@@ -136,7 +136,8 @@ include 'menu/header.php';
                         $folderPath = 'images/';
                         $imageSrc = $folderPath . $product['HinhAnh'];
                     ?>
-                        <div class="product-card" data-category="<?= strtolower($product['MaDanhMuc']) ?>">
+                        <!-- Thêm data-id -->
+                        <div class="product-card" data-category="<?= strtolower($product['MaDanhMuc']) ?>" data-id="<?= htmlspecialchars($product['MaSanPham']) ?>">
                             <div class="product-img">
                                 <?php if (!empty($product['HinhAnh'])): ?>
                                     <img src="<?= htmlspecialchars($imageSrc) ?>" 
@@ -149,11 +150,17 @@ include 'menu/header.php';
                             <h3 class="product-name"><?= htmlspecialchars($product['TenSanPham']) ?></h3>
                             <p class="product-desc"><?= htmlspecialchars($product['MoTa']) ?></p>
                             <div class="product-meta">
-                                <span class="product-price"><?= number_format($product['GiaBan'], 0, ',', '.') ?> <small>đ</small></span>
+                                <span class="product-price">
+                                    <?= number_format($product['GiaBan'], 0, ',', '.') ?> 
+                                    <small>đ</small>
+                                    <?php if (!empty($product['DonViTinh'])): ?>
+                                        <span style="font-size:12px; color:#777;">/ <?= htmlspecialchars($product['DonViTinh']) ?></span>
+                                    <?php endif; ?>
+                                </span>
                                 <span class="product-rating">★★★★★ <span>(0)</span></span>
                             </div>
                             <div class="product-actions">
-                                <!-- ===== SỬA NÚT THÊM GIỎ: GỌI TRỰC TIẾP addToCart với tham số ===== -->
+                                <!-- Nút thêm giỏ đã có onclick, không cần stopPropagation vì trong JS sẽ kiểm tra -->
                                 <button class="btn-cart" 
                                     onclick="window.addToCart(
                                         '<?= htmlspecialchars($product['MaSanPham']) ?>',
@@ -191,7 +198,7 @@ include 'menu/header.php';
     </div>
 </section>
 
-<!-- ===== LOẠI BỎ FILE JS KHÔNG CẦN THIẾT, CHỈ GIỮ HEADER.JS ===== -->
+<!-- ===== JS RIÊNG ===== -->
 <script src="js/sanphamKH.js"></script>
 
 <?php include 'footer/footer.php'; ?>

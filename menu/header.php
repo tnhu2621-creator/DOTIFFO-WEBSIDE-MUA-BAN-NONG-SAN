@@ -1,6 +1,8 @@
 <?php
-// Bắt đầu session để quản lý người dùng và giỏ hàng
-session_start();
+// Kiểm tra session trước khi bắt đầu để tránh lỗi
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 // --- Xử lý đăng xuất ---
 if (isset($_GET['logout'])) {
@@ -63,12 +65,13 @@ if ($isLoggedIn) {
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         $cartCount = $row['total'] ?? 0;
 
-        // Lấy chi tiết giỏ hàng, quan trọng: thêm sp.MaSanPham
+        // Lấy chi tiết giỏ hàng, thêm sp.DonViTinh để hiển thị đơn vị
         $stmtItems = $pdo->prepare("
             SELECT 
-                sp.MaSanPham AS MaSanPham,          -- <-- ĐÃ THÊM
+                sp.MaSanPham AS MaSanPham,
                 sp.TenSanPham AS name, 
                 sp.GiaBan AS price, 
+                sp.DonViTinh AS don_vi,          -- <-- THÊM CỘT ĐƠN VỊ
                 gc.SoLuong AS quantity, 
                 CONCAT('images/', sp.HinhAnh) AS icon
             FROM giohang_chitiet gc
@@ -199,7 +202,7 @@ if ($isLoggedIn) {
     </div>
 </header>
 
-<!-- Truyền dữ liệu giỏ hàng cho JavaScript (bao gồm MaSanPham) -->
+<!-- Truyền dữ liệu giỏ hàng cho JavaScript (bao gồm MaSanPham và don_vi) -->
 <script>
     const dbCartData = <?= json_encode($dbCartItems) ?>;
 </script>

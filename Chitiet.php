@@ -38,15 +38,35 @@ if (!$product) {
 
 // Xác định số lượng tồn kho (nếu NULL thì coi là 0)
 $soLuongTon = isset($product['SoLuongTon']) ? (int)$product['SoLuongTon'] : 0;
+
+// ===== XỬ LÝ NÚT QUAY LẠI =====
+// Lấy trang trước đó từ HTTP_REFERER
+$referer = isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '';
+$backUrl = 'index.php'; // mặc định
+
+// Nếu có referer và không phải là chính trang Chitiet.php
+if (!empty($referer) && strpos($referer, 'Chitiet.php') === false) {
+    // Kiểm tra nếu referer chứa sanphamKH.php hoặc index.php
+    if (strpos($referer, 'sanphamKH.php') !== false) {
+        $backUrl = 'sanphamKH.php';
+    } elseif (strpos($referer, 'index.php') !== false || strpos($referer, '/dotifood/') !== false) {
+        // Nếu referer là index.php hoặc đường dẫn gốc
+        $backUrl = 'index.php';
+    } else {
+        // Trường hợp khác (ví dụ từ trang khác), mặc định về index
+        $backUrl = 'index.php';
+    }
+}
+// Nếu không có referer, giữ mặc định index.php
 ?>
 <!-- ===== CSS RIÊNG ===== -->
 <link rel="stylesheet" href="css/Chitiet.css" />
 
 <div class="container product-detail-wrapper" id="product-detail">
-    <!-- Nút quay lại trang chủ -->
+    <!-- Nút quay lại với URL động -->
     <div class="back-home">
-        <a href="index.php" class="btn-back">
-            <i class="fas fa-arrow-left"></i> Quay lại trang chủ
+        <a href="<?= htmlspecialchars($backUrl) ?>" class="btn-back">
+            <i class="fas fa-arrow-left"></i> Quay lại
         </a>
     </div>
 
@@ -63,6 +83,9 @@ $soLuongTon = isset($product['SoLuongTon']) ? (int)$product['SoLuongTon'] : 0;
             <p class="product-detail-price">
                 <?= number_format($product['GiaBan'], 0, ',', '.') ?> 
                 <small>VNĐ</small>
+                <?php if (!empty($product['DonViTinh'])): ?>
+                    <span style="font-size:14px; color:#555;"> / <?= htmlspecialchars($product['DonViTinh']) ?></span>
+                <?php endif; ?>
             </p>
             <!-- Hiển thị số lượng tồn kho -->
             <p class="product-detail-stock">
