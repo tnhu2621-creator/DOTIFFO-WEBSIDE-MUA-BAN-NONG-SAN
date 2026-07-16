@@ -1,7 +1,7 @@
 (function() {
     'use strict';
 
-    // Lấy dữ liệu từ server
+    // Lấy dữ liệu từ server (được gắn vào window)
     let orders = window.ordersData || [];
     const lastOrderId = window.lastOrderId || null;
 
@@ -192,7 +192,7 @@
         detailModal.classList.add('open');
     }
 
-    // ===== CANCEL ORDER =====
+    // ===== CANCEL ORDER (gửi AJAX lên server) =====
     function cancelOrder(id) {
         const order = orders.find(o => o.MaDonHang === id);
         if (!order) return;
@@ -207,16 +207,29 @@
 
     function confirmCancelOrder() {
         const id = cancelOrderId.value;
-        const order = orders.find(o => o.MaDonHang === id);
-        if (order) {
-            // Cập nhật trạng thái trên client (gửi AJAX lên server nếu cần)
-            order.TrangThai = 'Đã hủy';
-            // Ở đây bạn nên gọi API thực tế để cập nhật database
-            // Ví dụ: fetch('huy_don_hang.php', { method: 'POST', body: JSON.stringify({ id }) })
-        }
-        cancelModal.classList.remove('open');
-        renderOrders();
-        showToast(`Đã hủy đơn hàng ${id}`);
+        // Gửi AJAX đến server để hủy đơn
+        fetch('huy_don_hang.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'id=' + encodeURIComponent(id)
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                cancelModal.classList.remove('open');
+                showToast('Hủy đơn hàng thành công');
+                // Tải lại trang để cập nhật dữ liệu mới từ server
+                window.location.reload();
+            } else {
+                showToast(data.message || 'Hủy đơn thất bại', 'error');
+            }
+        })
+        .catch(err => {
+            showToast('Lỗi kết nối server', 'error');
+            console.error(err);
+        });
     }
 
     // ===== TAB SWITCH =====

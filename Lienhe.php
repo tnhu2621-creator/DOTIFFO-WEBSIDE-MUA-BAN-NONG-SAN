@@ -1,4 +1,37 @@
 <?php
+include 'config/database.php';
+
+$success = '';
+$error = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $hoten       = trim($_POST['fullname'] ?? '');
+    $email       = trim($_POST['email'] ?? '');
+    $sodienthoai = trim($_POST['phone'] ?? '');
+    $chude       = trim($_POST['subject'] ?? '');
+    $noidung     = trim($_POST['message'] ?? '');
+
+    $errors = [];
+    if (empty($hoten)) $errors[] = 'Họ tên không được để trống.';
+    if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Email không hợp lệ.';
+    if (empty($noidung)) $errors[] = 'Tin nhắn không được để trống.';
+
+    if (empty($errors)) {
+        try {
+            $stmt = $conn->prepare("INSERT INTO lienhe (hoten, email, sodienthoai, chude, noidung) VALUES (?, ?, ?, ?, ?)");
+            if ($stmt->execute([$hoten, $email, $sodienthoai, $chude, $noidung])) {
+                $success = 'Gửi tin nhắn thành công! Chúng tôi sẽ phản hồi sớm nhất.';
+            } else {
+                $error = 'Lỗi hệ thống, vui lòng thử lại sau.';
+            }
+        } catch (PDOException $e) {
+            $error = 'Lỗi CSDL: ' . $e->getMessage();
+        }
+    } else {
+        $error = implode('<br>', $errors);
+    }
+}
+
 include 'menu/header.php';
 ?>
 <link rel="stylesheet" href="css/Lienhe.css" />
@@ -20,6 +53,16 @@ include 'menu/header.php';
                 <h2>Gửi tin nhắn <span>ngay</span></h2>
                 <p>Chúng tôi luôn sẵn sàng lắng nghe và hỗ trợ bạn.</p>
             </div>
+
+            <?php if (!empty($success)): ?>
+                <div class="alert alert-success" style="padding: 12px 16px; background: #d4edda; color: #155724; border-radius: 6px; margin-bottom: 20px; border: 1px solid #c3e6cb;">
+                    <?= htmlspecialchars($success) ?>
+                </div>
+            <?php elseif (!empty($error)): ?>
+                <div class="alert alert-danger" style="padding: 12px 16px; background: #f8d7da; color: #721c24; border-radius: 6px; margin-bottom: 20px; border: 1px solid #f5c6cb;">
+                    <?= htmlspecialchars($error) ?>
+                </div>
+            <?php endif; ?>
 
             <form id="contactForm" class="contact-form" method="post" action="">
                 <div class="form-row">
@@ -54,8 +97,6 @@ include 'menu/header.php';
                     <i class="fas fa-paper-plane"></i> Gửi tin nhắn
                 </button>
             </form>
-
-            <div id="formMessage" class="form-message"></div>
         </div>
 
         <!-- Cột phải: Thông tin + Bản đồ -->
@@ -106,4 +147,5 @@ include 'menu/header.php';
     </div>
 </section>
 
+<script src="js/Lienhe.js"></script>
 <?php include 'footer/footer.php'; ?>
