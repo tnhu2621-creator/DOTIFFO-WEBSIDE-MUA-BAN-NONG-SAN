@@ -625,3 +625,32 @@ a { text-decoration: none; color: inherit; }
     border-color: #28a745; /* Đổi thành màu xanh lá thương hiệu Dotifood khi chọn */
     box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.15);
 }
+
+/* ===== NÚT XUẤT EXCEL ===== */
+.btn-export-excel {
+    background: #008919;           /* màu xanh chủ đạo DOTIFOOD */
+    color: #fff;
+    border: none;
+    padding: 6px 16px;
+    border-radius: 50px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.3s ease, transform 0.2s ease;
+}
+
+.btn-export-excel i {
+    font-size: 1rem;
+}
+
+.btn-export-excel:hover {
+    background: #006e14;           /* đậm hơn khi hover */
+    transform: translateY(-1px);
+}
+
+.btn-export-excel:active {
+    transform: scale(0.97);
+}

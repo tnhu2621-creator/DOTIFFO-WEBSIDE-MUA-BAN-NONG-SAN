@@ -1,5 +1,4 @@
 <?php
-// Tắt hiển thị lỗi để không làm hỏng JSON
 error_reporting(0);
 ini_set('display_errors', 0);
 
@@ -12,12 +11,14 @@ try {
         SELECT 
             sp.MaSanPham AS id,
             sp.TenSanPham AS name,
-            dm.TenDanhMuc AS category,           -- Lấy tên danh mục từ bảng danhmuc
-            NguongCanhBao AS reorderLevel,
-            COALESCE(kh.SoLuongTon, 0) AS quantity
+            dm.TenDanhMuc AS category,
+            COALESCE(SUM(kh.SoLuongTon), 0) AS quantity,
+            COALESCE(AVG(kh.GiaNhap), 0) AS GiaNhap
         FROM sanpham sp
-        LEFT JOIN danhmuc dm ON sp.MaDanhMuc = dm.MaDanhMuc   -- JOIN để lấy tên
+        LEFT JOIN danhmuc dm ON sp.MaDanhMuc = dm.MaDanhMuc
         LEFT JOIN khohang kh ON sp.MaSanPham = kh.MaSanPham
+        GROUP BY sp.MaSanPham
+        ORDER BY sp.MaSanPham ASC
     ";
     $stmt = $pdo->prepare($query);
     $stmt->execute();
@@ -25,11 +26,11 @@ try {
 
     $data = array_map(function($row) {
         return [
-            'id'   => $row['id'],
-            'name' => $row['name'],
-            'category' => $row['category'] ?? 'Chưa phân loại', // phòng trường hợp null
+            'id'       => $row['id'],
+            'name'     => $row['name'],
+            'category' => $row['category'] ?? 'Chưa phân loại',
             'quantity' => (int)$row['quantity'],
-            'reorderLevel' => (int)($row['reorderLevel'] ?? 10)
+            'GiaNhap'  => (float)$row['GiaNhap']
         ];
     }, $rows);
 

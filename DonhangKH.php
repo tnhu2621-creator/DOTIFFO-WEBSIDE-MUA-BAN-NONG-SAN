@@ -91,17 +91,34 @@ $ordersJson = json_encode($orders, JSON_UNESCAPED_UNICODE);
         </div>
     </div>
 
-    <!-- Modal xác nhận hủy -->
+    <!-- Modal xác nhận hủy (có danh sách lý do) -->
     <div class="modal-overlay" id="cancelModal">
         <div class="modal modal-sm">
             <div class="modal-header">
-                <h3>Xác nhận hủy đơn hàng</h3>
+                <h3>Hủy đơn hàng</h3>
                 <button class="modal-close" id="cancelModalClose"><i class="fas fa-times"></i></button>
             </div>
             <div class="modal-body">
                 <p style="margin-bottom:12px;">Bạn có chắc chắn muốn hủy đơn hàng <strong id="cancelOrderCode"></strong>?</p>
-                <p style="color:var(--gray-400); font-size:0.9rem;">Hành động này không thể hoàn tác.</p>
+                <p style="color:var(--gray-400); font-size:0.9rem; margin-bottom:16px;">Hành động này không thể hoàn tác.</p>
                 <input type="hidden" id="cancelOrderId" />
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label for="cancelReason" style="font-weight:600;">Lý do hủy <span style="color:red;">*</span></label>
+                    <select id="cancelReason" class="form-control" required>
+                        <option value="">-- Chọn lý do --</option>
+                        <option value="Đổi ý, không mua nữa">Đổi ý, không mua nữa</option>
+                        <option value="Chọn sai sản phẩm">Chọn sai sản phẩm</option>
+                        <option value="Giá cao, tìm được nơi rẻ hơn">Giá cao, tìm được nơi rẻ hơn</option>
+                        <option value="Thời gian giao hàng quá lâu">Thời gian giao hàng quá lâu</option>
+                        <option value="Địa chỉ giao hàng không đúng">Địa chỉ giao hàng không đúng</option>
+                        <option value="Không liên hệ được với người nhận">Không liên hệ được với người nhận</option>
+                        <option value="Lý do khác (ghi rõ bên dưới)">Lý do khác (ghi rõ bên dưới)</option>
+                    </select>
+                </div>
+                <div class="form-group" id="otherReasonGroup" style="display:none;">
+                    <label for="otherReason">Ghi rõ lý do khác</label>
+                    <input type="text" id="otherReason" class="form-control" placeholder="Nhập lý do ..." />
+                </div>
             </div>
             <div class="modal-footer">
                 <button class="btn-outline btn-sm" id="cancelModalCancel">Quay lại</button>

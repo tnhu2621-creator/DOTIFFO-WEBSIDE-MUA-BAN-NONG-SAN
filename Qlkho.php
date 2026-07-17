@@ -71,26 +71,18 @@ include 'admin/header.php';
                 <div class="toolbar">
                     <div style="display:flex; gap:10px; flex-wrap:wrap;">
                         <button class="btn-primary btn-sm" id="btnAddStock"><i class="fas fa-plus-circle"></i> Nhập kho</button>
-                        <button class="btn-primary btn-sm" id="btnAdjustStock"><i class="fas fa-edit"></i> Điều chỉnh tồn kho</button>
+                        <button class="btn-export-excel" id="btnExportStock"><i class="fas fa-file-excel"></i> Xuất Excel</button>
                     </div>
                     <div class="toolbar-right">
                         <select class="custom-dropdown" id="filter-danhmuc" name="danhmuc">
                             <option value="">Tất cả danh mục</option>
                             <?php
-                            // Đảm bảo gọi biến kết nối (nếu nằm trong hàm thì bỏ comment dòng global dưới)
-                            // global $conn; 
-
                             try {
-                                // Thay vì dùng mysqli_query, ta dùng query của PDO
                                 $stmt = $conn->query("SELECT MaDanhMuc, TenDanhMuc FROM danhmuc ORDER BY MaDanhMuc ASC");
-                                
-                                // Lặp và đổ dữ liệu ra option
                                 while ($row = $stmt->fetch()) {
-                                    // Lưu ý: Bạn hãy đổi 'MaDanhMuc' và 'TenDanhMuc' theo đúng tên cột trong database của bạn nhé
                                     echo "<option value='" . $row['TenDanhMuc'] . "'>" . $row['TenDanhMuc'] . "</option>";
                                 }
                             } catch (PDOException $e) {
-                                // Trả về lỗi chi tiết nếu câu lệnh SQL sai tên bảng hoặc tên cột
                                 echo "<option>Lỗi SQL: " . $e->getMessage() . "</option>";
                             }
                             ?>
@@ -119,7 +111,8 @@ include 'admin/header.php';
                                     <th>Tên sản phẩm</th>
                                     <th>Danh mục</th>
                                     <th>Tồn kho</th>
-                                    <th>Ngưỡng cảnh báo</th>
+                                    <!-- ĐÃ SỬA: Ngưỡng cảnh báo → Giá nhập -->
+                                    <th>Giá nhập</th>
                                     <th>Trạng thái</th>
                                     <th>Thao tác</th>
                                 </tr>

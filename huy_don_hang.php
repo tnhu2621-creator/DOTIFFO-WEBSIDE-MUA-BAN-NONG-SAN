@@ -11,9 +11,16 @@ if (!isset($_SESSION['user_id'])) {
 
 $user_id = $_SESSION['user_id'];
 $id = isset($_POST['id']) ? trim($_POST['id']) : '';
+$lyDo = isset($_POST['ly_do']) ? trim($_POST['ly_do']) : '';
 
 if (empty($id)) {
     echo json_encode(['success' => false, 'message' => 'Mã đơn hàng không hợp lệ']);
+    exit;
+}
+
+// Bắt buộc phải có lý do
+if (empty($lyDo)) {
+    echo json_encode(['success' => false, 'message' => 'Vui lòng chọn lý do hủy']);
     exit;
 }
 
@@ -34,12 +41,20 @@ try {
         exit;
     }
 
-    // Cập nhật trạng thái thành 'Đã hủy'
-    $update = $pdo->prepare("UPDATE donhang SET TrangThai = 'Đã hủy' WHERE MaDonHang = ?");
-    $update->execute([$id]);
+    // Cập nhật trạng thái và lưu lý do hủy
+    $update = $pdo->prepare("UPDATE donhang SET TrangThai = 'Đã hủy', LyDoHuy = ? WHERE MaDonHang = ?");
+    $update->execute([$lyDo, $id]);
 
-    // (Tùy chọn) Có thể hoàn lại số lượng tồn kho nếu cần
-    // ...
+    // Nếu đơn đang ở trạng thái "Đang xử lý" → cộng lại tồn kho
+    if ($currentStatus === 'Đang xử lý') {
+        $stmt = $pdo->prepare("SELECT MaSanPham, SoLuong FROM chitietdonhang WHERE MaDonHang = ?");
+        $stmt->execute([$id]);
+        $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($items as $item) {
+            $updateStock = $pdo->prepare("UPDATE khohang SET SoLuongTon = SoLuongTon + ? WHERE MaSanPham = ?");
+            $updateStock->execute([$item['SoLuong'], $item['MaSanPham']]);
+        }
+    }
 
     echo json_encode(['success' => true, 'message' => 'Hủy đơn hàng thành công']);
 

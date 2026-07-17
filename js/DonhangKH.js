@@ -1,31 +1,30 @@
 (function() {
     'use strict';
 
-    // Lấy dữ liệu từ server (được gắn vào window)
     let orders = window.ordersData || [];
     const lastOrderId = window.lastOrderId || null;
 
-    // DOM elements
     const activeOrdersEl = document.getElementById('activeOrders');
     const historyOrdersEl = document.getElementById('historyOrders');
     const activeBadge = document.getElementById('activeBadge');
     const tabBtns = document.querySelectorAll('.tab-btn');
 
-    // Modal detail
     const detailModal = document.getElementById('orderDetailModal');
     const detailContent = document.getElementById('orderDetailContent');
     const detailModalClose = document.getElementById('detailModalClose');
     const detailModalCancel = document.getElementById('detailModalCancel');
 
-    // Modal cancel
+    // Modal cancel (đã sửa)
     const cancelModal = document.getElementById('cancelModal');
     const cancelOrderCode = document.getElementById('cancelOrderCode');
     const cancelOrderId = document.getElementById('cancelOrderId');
+    const cancelReason = document.getElementById('cancelReason');
+    const otherReasonGroup = document.getElementById('otherReasonGroup');
+    const otherReason = document.getElementById('otherReason');
     const cancelModalClose = document.getElementById('cancelModalClose');
     const cancelModalCancel = document.getElementById('cancelModalCancel');
     const cancelModalConfirm = document.getElementById('cancelModalConfirm');
 
-    // Toast
     const toast = document.getElementById('toast');
     const toastMsg = document.getElementById('toastMessage');
 
@@ -70,7 +69,6 @@
 
         activeBadge.textContent = activeOrders.length;
 
-        // Render active
         if (activeOrders.length === 0) {
             activeOrdersEl.innerHTML = `
                 <div class="empty-orders">
@@ -84,7 +82,6 @@
             activeOrdersEl.innerHTML = activeOrders.map(order => renderOrderCard(order)).join('');
         }
 
-        // Render history
         if (historyOrders.length === 0) {
             historyOrdersEl.innerHTML = `
                 <div class="empty-orders">
@@ -97,7 +94,6 @@
             historyOrdersEl.innerHTML = historyOrders.map(order => renderOrderCard(order, true)).join('');
         }
 
-        // Gắn sự kiện cho các nút
         document.querySelectorAll('.btn-cancel-order').forEach(btn => {
             btn.addEventListener('click', function() {
                 cancelOrder(this.dataset.id);
@@ -109,7 +105,6 @@
             });
         });
 
-        // Highlight đơn hàng mới (nếu có)
         if (lastOrderId) {
             const card = document.querySelector(`.order-card[data-id="${lastOrderId}"]`);
             if (card) {
@@ -179,6 +174,7 @@
                 <div class="detail-item"><strong>Thanh toán</strong><span>${order.PhuongThucThanhToan || 'COD'}</span></div>
                 <div class="detail-item" style="grid-column: 1 / -1;"><strong>Địa chỉ giao hàng</strong><span>${order.DiaChiGiaoHang}</span></div>
                 ${order.GhiChu ? `<div class="detail-item" style="grid-column: 1 / -1;"><strong>Ghi chú</strong><span>${order.GhiChu}</span></div>` : ''}
+                ${order.LyDoHuy ? `<div class="detail-item" style="grid-column: 1 / -1;"><strong>Lý do hủy</strong><span>${order.LyDoHuy}</span></div>` : ''}
             </div>
             <div class="detail-products">
                 <h4>Sản phẩm</h4>
@@ -192,7 +188,7 @@
         detailModal.classList.add('open');
     }
 
-    // ===== CANCEL ORDER (gửi AJAX lên server) =====
+    // ===== CANCEL ORDER WITH REASON =====
     function cancelOrder(id) {
         const order = orders.find(o => o.MaDonHang === id);
         if (!order) return;
@@ -202,18 +198,43 @@
         }
         cancelOrderCode.textContent = order.MaDonHang;
         cancelOrderId.value = id;
+        // Reset dropdown và ô nhập
+        cancelReason.value = '';
+        otherReasonGroup.style.display = 'none';
+        otherReason.value = '';
         cancelModal.classList.add('open');
     }
 
+    // Hiện ô nhập lý do khác khi chọn option cuối
+    cancelReason.addEventListener('change', function() {
+        if (this.value === 'Lý do khác (ghi rõ bên dưới)') {
+            otherReasonGroup.style.display = 'block';
+            otherReason.focus();
+        } else {
+            otherReasonGroup.style.display = 'none';
+        }
+    });
+
     function confirmCancelOrder() {
         const id = cancelOrderId.value;
-        // Gửi AJAX đến server để hủy đơn
+        let lyDo = cancelReason.value;
+        if (lyDo === 'Lý do khác (ghi rõ bên dưới)') {
+            lyDo = otherReason.value.trim();
+            if (!lyDo) {
+                showToast('Vui lòng nhập lý do khác.', 'error');
+                return;
+            }
+        } else if (!lyDo) {
+            showToast('Vui lòng chọn lý do hủy.', 'error');
+            return;
+        }
+
         fetch('huy_don_hang.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
-            body: 'id=' + encodeURIComponent(id)
+            body: 'id=' + encodeURIComponent(id) + '&ly_do=' + encodeURIComponent(lyDo)
         })
         .then(res => res.json())
         .then(data => {

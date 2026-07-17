@@ -86,28 +86,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $pdo->beginTransaction();
             try {
-                // ===== KHẮC PHỤC LỖI DUPLICATE '' =====
+                // ===== HÀM TẠO MÃ ĐƠN HÀNG 7 KÝ TỰ =====
+                function generateOrderId($length = 7) {
+                    $characters = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+                    $randomString = '';
+                    for ($i = 0; $i < $length; $i++) {
+                        $randomString .= $characters[rand(0, strlen($characters) - 1)];
+                    }
+                    return $randomString;
+                }
+
                 // Kiểm tra và sửa bản ghi có MaDonHang rỗng (nếu có)
                 $stmt = $pdo->prepare("SELECT COUNT(*) FROM donhang WHERE MaDonHang = ''");
                 $stmt->execute();
                 if ($stmt->fetchColumn() > 0) {
-                    // Cập nhật bản ghi đó thành mã giả để giải phóng khóa chính
                     $newFakeId = 'FAKE_' . uniqid();
                     $update = $pdo->prepare("UPDATE donhang SET MaDonHang = ? WHERE MaDonHang = ''");
                     $update->execute([$newFakeId]);
                     error_log("Đã sửa bản ghi có MaDonHang rỗng thành $newFakeId");
                 }
 
-                // Tạo mã đơn hàng duy nhất (an toàn)
+                // Tạo mã đơn hàng duy nhất (7 ký tự)
                 $maDonHang = '';
                 $attempt = 0;
                 do {
-                    // Cách 1: dùng timestamp + random
-                    $maDonHang = 'DH' . date('YmdHis') . rand(1000, 9999);
-                    // Fallback nếu vì lý do nào đó mã vẫn rỗng
-                    if (empty($maDonHang)) {
-                        $maDonHang = 'DH_' . uniqid();
-                    }
+                    $maDonHang = generateOrderId(7);
                     // Đảm bảo không vượt quá 20 ký tự (varchar(20))
                     if (strlen($maDonHang) > 20) {
                         $maDonHang = substr($maDonHang, 0, 20);
@@ -126,7 +129,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     throw new Exception('Mã đơn hàng rỗng, không thể tiếp tục.');
                 }
 
-                // Ghi log để debug
                 error_log("Đang tạo đơn hàng với mã: " . $maDonHang);
 
                 // Insert đơn hàng
@@ -147,20 +149,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     throw new Exception('Không thể tạo đơn hàng (0 rows affected).');
                 }
 
-                // ===== ĐÃ SỬA: Thêm MaChiTiet vào câu lệnh INSERT chi tiết đơn hàng =====
+                // Insert chi tiết đơn hàng
                 $sql = "INSERT INTO chitietdonhang (MaChiTiet, MaDonHang, MaSanPham, SoLuong, DonGia)
                         VALUES (?, ?, ?, ?, ?)";
                 $stmt = $pdo->prepare($sql);
 
                 foreach ($cartItems as $item) {
-                    // Tạo mã chi tiết đơn hàng duy nhất (VD: CT65f4abc...) đảm bảo không quá 20 ký tự
-                    $maChiTiet = substr('CT' . uniqid(), 0, 20); 
-                    
+                    $maChiTiet = substr('CT' . uniqid(), 0, 20);
                     $stmt->execute([
-                        $maChiTiet, 
-                        $maDonHang, 
-                        $item['MaSanPham'], 
-                        $item['SoLuong'], 
+                        $maChiTiet,
+                        $maDonHang,
+                        $item['MaSanPham'],
+                        $item['SoLuong'],
                         $item['GiaBan']
                     ]);
                 }

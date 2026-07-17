@@ -156,7 +156,7 @@ a {
     color: #721c24;
 }
 
-/* ===== CHARTS ROW ===== */
+/* ===== CHARTS ROW – CẢI TIẾN CHIỀU CAO & THẨM MỸ ===== */
 .charts-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -166,21 +166,45 @@ a {
 
 .chart-card {
     background: var(--white);
-    padding: 14px 18px;
+    padding: 18px 20px 20px 20px;  /* tăng padding dưới để biểu đồ thoáng */
     border-radius: var(--radius);
     box-shadow: var(--shadow);
+    transition: var(--transition);
+    display: flex;
+    flex-direction: column;
+}
+
+.chart-card:hover {
+    box-shadow: var(--shadow-hover);
 }
 
 .chart-card h3 {
-    font-size: 0.85rem;
+    font-size: 0.95rem;
     font-weight: 600;
     color: var(--green-dark);
-    margin-bottom: 10px;
+    margin-bottom: 12px;
+    letter-spacing: 0.3px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.chart-card h3::before {
+    content: '';
+    width: 4px;
+    height: 18px;
+    background: var(--pink);
+    border-radius: 4px;
+    display: inline-block;
 }
 
 .chart-card canvas {
     width: 100% !important;
-    height: 160px !important;
+    height: 280px !important;      /* Tăng chiều cao từ 160px lên 280px */
+    max-height: 280px;
+    border-radius: 6px;
+    background: #fafbfc;
+    padding: 4px 0;
 }
 
 /* ===== TABLE CARD ===== */
@@ -271,6 +295,11 @@ a {
     color: #721c24;
 }
 
+.status-info {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
 /* ===== RESPONSIVE ===== */
 @media (max-width: 1200px) {
     .stats-grid {
@@ -313,10 +342,10 @@ a {
         padding: 12px;
     }
     .chart-card {
-        padding: 12px 14px;
+        padding: 14px 16px 16px 16px;
     }
     .chart-card canvas {
-        height: 140px !important;
+        height: 220px !important;   /* vẫn cao hơn responsive cũ */
     }
     .table-header {
         padding: 8px 12px;
@@ -354,11 +383,7 @@ a {
     .stat-info h3 {
         font-size: 0.9rem;
     }
+    .chart-card canvas {
+        height: 180px !important;
+    }
 }
-
-/* Thêm style nhỏ cho status */
-        .status { padding: 4px 10px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; }
-        .status-success { background: #d4edda; color: #155724; }
-        .status-warning { background: #fff3cd; color: #856404; }
-        .status-danger { background: #f8d7da; color: #721c24; }
-        .status-info { background: #d1ecf1; color: #0c5460; }

@@ -7,7 +7,6 @@
 
     // DOM refs
     let tbody = document.getElementById('stockTableBody');
-    // === SỬA ID CHO ĐÚNG VỚI HTML ===
     let filterCategory = document.getElementById('filter-danhmuc');
     let filterStatus = document.getElementById('filter-trangthai');
     let stockCount = document.getElementById('stockCount');
@@ -18,9 +17,9 @@
     let prevPageBtn = document.getElementById('prevPage');
     let nextPageBtn = document.getElementById('nextPage');
     let pageInfo = document.getElementById('pageInfo');
-    let searchInput = document.getElementById('searchInput'); // nếu có thêm sau
+    let searchInput = document.getElementById('searchInput');
 
-    // ===== HÀM XÁC ĐỊNH TRẠNG THÁI THEO SỐ LƯỢNG =====
+    // ===== HÀM XÁC ĐỊNH TRẠNG THÁI =====
     function getStatus(quantity) {
         if (quantity <= 0) return { text: 'Hết hàng', class: 'status-danger' };
         if (quantity <= 10) return { text: 'Sắp hết hàng', class: 'status-warning' };
@@ -28,6 +27,7 @@
     }
 
     function formatPrice(price) {
+        if (!price && price !== 0) return '0 đ';
         return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + ' đ';
     }
 
@@ -44,14 +44,9 @@
 
     // ===== LOAD DỮ LIỆU TỪ API =====
     function loadStockData() {
-        console.log('🔄 Đang tải dữ liệu...');
         fetch('includes/get_stock.php')
             .then(response => {
-                if (!response.ok) {
-                    return response.text().then(text => {
-                        throw new Error(`HTTP ${response.status}: ${text.substring(0, 100)}`);
-                    });
-                }
+                if (!response.ok) throw new Error('HTTP ' + response.status);
                 return response.json();
             })
             .then(data => {
@@ -60,7 +55,7 @@
                 renderTable();
             })
             .catch(err => {
-                console.error('❌ Lỗi:', err);
+                console.error('Lỗi:', err);
                 showToast('Không tải được dữ liệu: ' + err.message, 'error');
                 if (tbody) {
                     tbody.innerHTML = `
@@ -78,7 +73,7 @@
     // ===== UPDATE THỐNG KÊ =====
     function updateStats() {
         const total = stockData.length;
-        const totalStock = stockData.reduce((sum, item) => sum + item.quantity, 0);
+        const totalStock = stockData.reduce((sum, item) => sum + (item.quantity || 0), 0);
         const lowStock = stockData.filter(item => item.quantity > 0 && item.quantity <= 10).length;
         const outOfStock = stockData.filter(item => item.quantity <= 0).length;
 
@@ -88,19 +83,16 @@
         if (outOfStockCountEl) outOfStockCountEl.textContent = outOfStock;
     }
 
-    // ===== LỌC DỮ LIỆU (SỬA ĐIỀU KIỆN) =====
+    // ===== LỌC DỮ LIỆU =====
     function getFilteredData() {
         const keyword = searchInput ? searchInput.value.toLowerCase().trim() : '';
-        // Lấy giá trị từ dropdown
         const category = filterCategory ? filterCategory.value : '';
         const statusFilter = filterStatus ? filterStatus.value : '';
 
         return stockData.filter(item => {
             const matchName = item.name.toLowerCase().includes(keyword);
-            // === QUAN TRỌNG: nếu category rỗng hoặc 'all' thì bỏ qua lọc ===
             const matchCategory = !category || category === 'all' || item.category === category;
             const status = getStatus(item.quantity).text;
-            // Tương tự cho status
             const matchStatus = !statusFilter || statusFilter === 'all' || status === statusFilter;
             return matchName && matchCategory && matchStatus;
         });
@@ -143,13 +135,14 @@
         let html = '';
         pageItems.forEach(item => {
             const status = getStatus(item.quantity);
+            const giaNhap = item.GiaNhap || 0;
             html += `
                 <tr>
                     <td>#${String(item.id).padStart(3, '0')}</td>
                     <td><strong>${item.name}</strong></td>
                     <td>${item.category}</td>
                     <td>${item.quantity}</td>
-                    <td>${item.reorderLevel}</td>
+                    <td>${formatPrice(giaNhap)}</td>
                     <td><span class="status ${status.class}">${status.text}</span></td>
                     <td>
                         <button class="action-btn edit" onclick="openAdjustModal('${item.id}')"><i class="fas fa-edit"></i></button>
@@ -245,7 +238,165 @@
             });
     };
 
-    // ===== PAGINATION =====
+    // ===== XUẤT EXCEL CÓ ĐỊNH DẠNG (FONT TIMES NEW ROMAN) =====
+    function exportExcel() {
+        const filtered = getFilteredData();
+        if (filtered.length === 0) {
+            showToast('Không có dữ liệu để xuất.', 'error');
+            return;
+        }
+
+        // Tạo bảng HTML với CSS inline để Excel hiểu
+        let htmlContent = `
+            <html xmlns:o="urn:schemas-microsoft-com:office:office" 
+                  xmlns:x="urn:schemas-microsoft-com:office:excel" 
+                  xmlns="http://www.w3.org/TR/REC-html40">
+            <head>
+                <meta charset="UTF-8">
+                <!--[if gte mso 9]>
+                <xml>
+                    <x:ExcelWorkbook>
+                        <x:ExcelWorksheets>
+                            <x:ExcelWorksheet>
+                                <x:Name>Kho hàng</x:Name>
+                                <x:WorksheetOptions>
+                                    <x:DisplayGridlines/>
+                                </x:WorksheetOptions>
+                            </x:ExcelWorksheet>
+                        </x:ExcelWorksheets>
+                    </x:ExcelWorkbook>
+                </xml>
+                <![endif]-->
+                <style>
+                    /* Định dạng chung: Times New Roman, cỡ chữ 12 */
+                    body {
+                        font-family: 'Times New Roman', serif;
+                        font-size: 12pt;
+                    }
+                    table {
+                        border-collapse: collapse;
+                        width: 100%;
+                        font-family: 'Times New Roman', serif;
+                        font-size: 12pt;
+                    }
+                    th, td {
+                        border: 1px solid #ddd;
+                        padding: 6px 10px;
+                        text-align: left;
+                        vertical-align: middle;
+                        font-family: 'Times New Roman', serif;
+                        font-size: 12pt;
+                    }
+                    th {
+                        background-color: #008919;
+                        color: #ffffff;
+                        font-weight: 700;
+                        text-align: center;
+                        border-color: #006e14;
+                    }
+                    td {
+                        background-color: #ffffff;
+                    }
+                    .status-ok {
+                        color: #155724;
+                        background-color: #d4edda;
+                        font-weight: 600;
+                        padding: 2px 8px;
+                        border-radius: 12px;
+                    }
+                    .status-warning {
+                        color: #856404;
+                        background-color: #fff3cd;
+                        font-weight: 600;
+                        padding: 2px 8px;
+                        border-radius: 12px;
+                    }
+                    .status-danger {
+                        color: #721c24;
+                        background-color: #f8d7da;
+                        font-weight: 600;
+                        padding: 2px 8px;
+                        border-radius: 12px;
+                    }
+                    .price {
+                        text-align: right;
+                        font-weight: 500;
+                    }
+                    .text-center {
+                        text-align: center;
+                    }
+                    /* Tiêu đề chính: cỡ chữ 15, Times New Roman */
+                    .header-title {
+                        font-size: 15pt;
+                        font-weight: 700;
+                        color: #008919;
+                        margin-bottom: 10px;
+                        font-family: 'Times New Roman', serif;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="header-title">📦 DANH SÁCH TỒN KHO</div>
+                <p><strong>Ngày xuất:</strong> ${new Date().toLocaleDateString('vi-VN')}</p>
+                <p><strong>Tổng số sản phẩm:</strong> ${filtered.length}</p>
+                <br/>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Mã SP</th>
+                            <th>Tên sản phẩm</th>
+                            <th>Danh mục</th>
+                            <th>Tồn kho</th>
+                            <th>Giá nhập</th>
+                            <th>Trạng thái</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        filtered.forEach(item => {
+            const status = getStatus(item.quantity);
+            const statusClass = status.text === 'Đủ hàng' ? 'status-ok' : 
+                               (status.text === 'Sắp hết hàng' ? 'status-warning' : 'status-danger');
+            const giaNhap = item.GiaNhap || 0;
+            htmlContent += `
+                <tr>
+                    <td class="text-center">${item.id}</td>
+                    <td><strong>${item.name}</strong></td>
+                    <td>${item.category}</td>
+                    <td class="text-center">${item.quantity}</td>
+                    <td class="price">${formatPrice(giaNhap)}</td>
+                    <td><span class="${statusClass}">${status.text}</span></td>
+                </tr>
+            `;
+        });
+
+        htmlContent += `
+                    </tbody>
+                </table>
+                <br/>
+                <p style="color: #999; font-size: 11pt; font-family: 'Times New Roman', serif;">* File được xuất từ hệ thống DOTIFOOD</p>
+            </body>
+            </html>
+        `;
+
+        // Tạo blob và tải file
+        const blob = new Blob([htmlContent], { 
+            type: 'application/vnd.ms-excel;charset=utf-8' 
+        });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Danh_sach_ton_kho_${new Date().toISOString().slice(0,10)}.xls`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+
+        showToast('Xuất Excel thành công!');
+    }
+
+    // ===== SỰ KIỆN PAGINATION =====
     if (prevPageBtn) {
         prevPageBtn.addEventListener('click', function() {
             if (currentPage > 1) { currentPage--; renderTable(); }
@@ -279,7 +430,13 @@
         });
     }
 
-    // ===== SỰ KIỆN MODAL =====
+    // ===== NÚT XUẤT EXCEL =====
+    const btnExport = document.getElementById('btnExportStock');
+    if (btnExport) {
+        btnExport.addEventListener('click', exportExcel);
+    }
+
+    // ===== SỰ KIỆN MODAL ĐIỀU CHỈNH =====
     document.getElementById('modalSave').addEventListener('click', saveAdjustment);
     document.getElementById('modalCancel').addEventListener('click', function() {
         document.getElementById('adjustModal').classList.remove('open');
@@ -291,6 +448,7 @@
         if (e.target === this) this.classList.remove('open');
     });
 
+    // ===== MODAL LỊCH SỬ =====
     document.getElementById('historyModalClose').addEventListener('click', function() {
         document.getElementById('historyModal').classList.remove('open');
     });
@@ -433,13 +591,11 @@
         loadStockData();
     });
 
-    // Nếu bạn dùng event 'headerLoaded' từ menu/header, vẫn giữ để tương thích
+    // ===== HEADER LOADED =====
     document.addEventListener('headerLoaded', function() {
-        // Cập nhật lại refs phòng trường hợp DOM thay đổi
         filterCategory = document.getElementById('filter-danhmuc');
         filterStatus = document.getElementById('filter-trangthai');
         searchInput = document.getElementById('searchInput');
-        // Gắn lại sự kiện (nếu chưa có)
         if (searchInput && !searchInput._listener) {
             searchInput.addEventListener('input', function() {
                 currentPage = 1;
@@ -468,5 +624,5 @@
         }
     });
 
-    console.log('📦 Quản lý kho đã sẵn sàng (đã sửa lọc)');
+    console.log('📦 Quản lý kho đã sẵn sàng');
 })();

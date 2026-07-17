@@ -9,7 +9,6 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
 
     // ==================== SẢN PHẨM ====================
 
-    // Lấy danh sách sản phẩm
     if ($action === 'get_products') {
         $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
         $limit = 10;
@@ -23,27 +22,26 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
             $params[] = $category_id;
         }
 
-        // Đếm tổng
         $countSql = "SELECT COUNT(*) FROM sanpham sp $where";
         $stmt = $pdo->prepare($countSql);
         $stmt->execute($params);
         $total = (int)$stmt->fetchColumn();
         $totalPages = ceil($total / $limit);
 
-        // Lấy danh sách có JOIN danhmuc (dùng đúng tên cột)
         $sql = "SELECT sp.*, dm.TenDanhMuc AS TenDanhMuc 
-            FROM sanpham sp 
-            LEFT JOIN danhmuc dm ON sp.MaDanhMuc = dm.MaDanhMuc 
-            $where 
-            ORDER BY sp.MaSanPham ASC 
-            LIMIT $limit OFFSET $offset";
+                FROM sanpham sp 
+                LEFT JOIN danhmuc dm ON sp.MaDanhMuc = dm.MaDanhMuc 
+                $where 
+                ORDER BY sp.MaSanPham ASC 
+                LIMIT $limit OFFSET $offset";
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         foreach ($products as &$p) {
             $p['GiaBanFormatted'] = formatCurrency($p['GiaBan']);
-            $p['HinAnhUrl'] = !empty($p['HinAnh']) ? 'uploads/' . $p['HinAnh'] : 'assets/no-image.png';
+            // Đường dẫn ảnh từ thư mục images/
+            $p['HinhAnhUrl'] = !empty($p['HinhAnh']) ? 'images/' . $p['HinhAnh'] : 'assets/no-image.png';
         }
 
         echo json_encode([
@@ -57,53 +55,56 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
 
     // Thêm sản phẩm
     if ($action === 'add_product') {
-        $maSanPham = $_POST['MaSanPham'];
-        $tenSanPham = $_POST['TenSanPham'];
-        $maDanhMuc = $_POST['MaDanhMuc'] ?: null;
-        $giaBan = $_POST['GiaBan'];
-        $moTa = $_POST['MoTa'] ?? '';
-        $hanSuDung = $_POST['HanSuDung'] ?? '';
-        $hinAnh = '';
-        if (isset($_FILES['HinAnh']) && $_FILES['HinAnh']['error'] === UPLOAD_ERR_OK) {
-            $uploadDir = 'uploads/';
+        $maSanPham   = $_POST['MaSanPham'];
+        $tenSanPham  = $_POST['TenSanPham'];
+        $maDanhMuc   = $_POST['MaDanhMuc'] ?: null;
+        $giaBan      = $_POST['GiaBan'];
+        $donViTinh   = $_POST['DonViTinh'] ?? '';
+        $moTa        = $_POST['MoTa'] ?? '';
+        $hanSuDung   = $_POST['HanSuDung'] ?? '';
+        $hinhAnh     = '';
+
+        if (isset($_FILES['HinhAnh']) && $_FILES['HinhAnh']['error'] === UPLOAD_ERR_OK) {
+            $uploadDir = 'images/';   // Đổi từ uploads/ thành images/
             if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
-            $ext = pathinfo($_FILES['HinAnh']['name'], PATHINFO_EXTENSION);
+            $ext = pathinfo($_FILES['HinhAnh']['name'], PATHINFO_EXTENSION);
             $fileName = $maSanPham . '.' . $ext;
-            move_uploaded_file($_FILES['HinAnh']['tmp_name'], $uploadDir . $fileName);
-            $hinAnh = $fileName;
+            move_uploaded_file($_FILES['HinhAnh']['tmp_name'], $uploadDir . $fileName);
+            $hinhAnh = $fileName;
         }
 
-        $sql = "INSERT INTO sanpham (MaSanPham, TenSanPham, MaDanhMuc, GiaBan, HinAnh, MoTa, HanSuDung)
-                VALUES (?, ?, ?, ?, ?, ?, ?)";
+        $sql = "INSERT INTO sanpham (MaSanPham, TenSanPham, MaDanhMuc, GiaBan, DonViTinh, HinhAnh, MoTa, HanSuDung)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         $stmt = $pdo->prepare($sql);
-        $success = $stmt->execute([$maSanPham, $tenSanPham, $maDanhMuc, $giaBan, $hinAnh, $moTa, $hanSuDung]);
+        $success = $stmt->execute([$maSanPham, $tenSanPham, $maDanhMuc, $giaBan, $donViTinh, $hinhAnh, $moTa, $hanSuDung]);
         echo json_encode(['success' => $success]);
         exit;
     }
 
     // Sửa sản phẩm
     if ($action === 'edit_product') {
-        $maSanPham = $_POST['MaSanPham'];
-        $tenSanPham = $_POST['TenSanPham'];
-        $maDanhMuc = $_POST['MaDanhMuc'] ?: null;
-        $giaBan = $_POST['GiaBan'];
-        $moTa = $_POST['MoTa'] ?? '';
-        $hanSuDung = $_POST['HanSuDung'] ?? '';
-        $hinAnh = $_POST['HinAnhOld'] ?? '';
+        $maSanPham   = $_POST['MaSanPham'];
+        $tenSanPham  = $_POST['TenSanPham'];
+        $maDanhMuc   = $_POST['MaDanhMuc'] ?: null;
+        $giaBan      = $_POST['GiaBan'];
+        $donViTinh   = $_POST['DonViTinh'] ?? '';
+        $moTa        = $_POST['MoTa'] ?? '';
+        $hanSuDung   = $_POST['HanSuDung'] ?? '';
+        $hinhAnh     = $_POST['HinhAnhOld'] ?? '';
 
-        if (isset($_FILES['HinAnh']) && $_FILES['HinAnh']['error'] === UPLOAD_ERR_OK) {
-            $uploadDir = 'uploads/';
+        if (isset($_FILES['HinhAnh']) && $_FILES['HinhAnh']['error'] === UPLOAD_ERR_OK) {
+            $uploadDir = 'images/';
             if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
-            $ext = pathinfo($_FILES['HinAnh']['name'], PATHINFO_EXTENSION);
+            $ext = pathinfo($_FILES['HinhAnh']['name'], PATHINFO_EXTENSION);
             $fileName = $maSanPham . '.' . $ext;
-            move_uploaded_file($_FILES['HinAnh']['tmp_name'], $uploadDir . $fileName);
-            $hinAnh = $fileName;
+            move_uploaded_file($_FILES['HinhAnh']['tmp_name'], $uploadDir . $fileName);
+            $hinhAnh = $fileName;
         }
 
-        $sql = "UPDATE sanpham SET TenSanPham=?, MaDanhMuc=?, GiaBan=?, HinAnh=?, MoTa=?, HanSuDung=?
+        $sql = "UPDATE sanpham SET TenSanPham=?, MaDanhMuc=?, GiaBan=?, DonViTinh=?, HinhAnh=?, MoTa=?, HanSuDung=?
                 WHERE MaSanPham=?";
         $stmt = $pdo->prepare($sql);
-        $success = $stmt->execute([$tenSanPham, $maDanhMuc, $giaBan, $hinAnh, $moTa, $hanSuDung, $maSanPham]);
+        $success = $stmt->execute([$tenSanPham, $maDanhMuc, $giaBan, $donViTinh, $hinhAnh, $moTa, $hanSuDung, $maSanPham]);
         echo json_encode(['success' => $success]);
         exit;
     }
@@ -111,11 +112,11 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
     // Xóa sản phẩm
     if ($action === 'delete_product') {
         $maSanPham = $_POST['MaSanPham'];
-        $stmt = $pdo->prepare("SELECT HinAnh FROM sanpham WHERE MaSanPham = ?");
+        $stmt = $pdo->prepare("SELECT HinhAnh FROM sanpham WHERE MaSanPham = ?");
         $stmt->execute([$maSanPham]);
         $row = $stmt->fetch();
-        if ($row && !empty($row['HinAnh'])) {
-            $file = 'uploads/' . $row['HinAnh'];
+        if ($row && !empty($row['HinhAnh'])) {
+            $file = 'images/' . $row['HinhAnh'];
             if (file_exists($file)) unlink($file);
         }
         $stmt = $pdo->prepare("DELETE FROM sanpham WHERE MaSanPham = ?");
@@ -135,12 +136,9 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
     }
 
     // ==================== DANH MỤC ====================
-
-    // Lấy danh sách danh mục
+    // (giữ nguyên phần danh mục)
     if ($action === 'get_categories') {
-        // Thay thế dòng query cũ bằng dòng dưới đây:
         $stmt = $pdo->query("SELECT MaDanhMuc AS MaDanhMuc, TenDanhMuc AS TenDanhMuc, MoTa AS MoTa FROM danhmuc ORDER BY MaDanhMuc ASC");
-        
         $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
         foreach ($categories as &$c) {
             $stmt2 = $pdo->prepare("SELECT COUNT(*) FROM sanpham WHERE MaDanhMuc = ?");
@@ -151,7 +149,6 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         exit;
     }
 
-    // Thêm danh mục
     if ($action === 'add_category') {
         $maDanhMuc = $_POST['MaDanhMuc'];
         $tenDanhMuc = $_POST['TenDanhMuc'];
@@ -163,7 +160,6 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         exit;
     }
 
-    // Sửa danh mục
     if ($action === 'edit_category') {
         $maDanhMuc = $_POST['MaDanhMuc'];
         $tenDanhMuc = $_POST['TenDanhMuc'];
@@ -175,7 +171,6 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         exit;
     }
 
-    // Xóa danh mục
     if ($action === 'delete_category') {
         $maDanhMuc = $_POST['MaDanhMuc'];
         $stmt = $pdo->prepare("SELECT COUNT(*) FROM sanpham WHERE MaDanhMuc = ?");
@@ -191,10 +186,10 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         exit;
     }
 
-    // Lấy chi tiết danh mục
     if ($action === 'get_category') {
         $maDanhMuc = $_GET['id'];
         $stmt = $pdo->prepare("SELECT MaDanhMuc AS MaDanhMuc, TenDanhMuc AS TenDanhMuc, MoTa AS MoTa FROM danhmuc WHERE MaDanhMuc = ?");
+        $stmt->execute([$maDanhMuc]);
         $category = $stmt->fetch(PDO::FETCH_ASSOC);
         echo json_encode($category ?: null);
         exit;
@@ -210,24 +205,20 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DOTIFOOD - Quản lý sản phẩm</title>
-
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet" />
-
     <link rel="stylesheet" href="css/Qlsanpham.css" />
     <link rel="stylesheet" href="admin/menu.css" />
     <link rel="stylesheet" href="admin/header.css" />
 </head>
 <body>
-
     <div class="admin-wrapper">
         <?php include 'admin/menu.php'; ?>
         <main class="main-content">
             <?php include 'admin/header.php'; ?>
             <div class="content-area">
-
                 <!-- Tabs -->
                 <div class="tabs">
                     <button class="tab-btn active" data-tab="products"><i class="fas fa-box"></i> Sản phẩm</button>
@@ -244,7 +235,6 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
                             </select>
                         </div>
                     </div>
-
                     <div class="table-card">
                         <div class="table-header">
                             <h3>Danh sách sản phẩm</h3>
@@ -258,15 +248,14 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
                                         <th>Tên sản phẩm</th>
                                         <th>Danh mục</th>
                                         <th>Giá</th>
+                                        <th>Đơn vị tính</th>
                                         <th>Ảnh</th>
                                         <th>Ngày cập nhật</th>
                                         <th>Hạn sử dụng</th>
                                         <th>Thao tác</th>
                                     </tr>
                                 </thead>
-                                <tbody id="productTableBody">
-                                    <!-- Render bằng JS -->
-                                </tbody>
+                                <tbody id="productTableBody"></tbody>
                             </table>
                         </div>
                         <div class="pagination-container" id="paginationContainer">
@@ -282,7 +271,6 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
                     <div class="toolbar">
                         <button class="btn-primary btn-sm" id="btnAddCategory"><i class="fas fa-plus"></i> Thêm danh mục</button>
                     </div>
-
                     <div class="table-card">
                         <div class="table-header">
                             <h3>Danh sách danh mục</h3>
@@ -299,14 +287,11 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
                                         <th>Thao tác</th>
                                     </tr>
                                 </thead>
-                                <tbody id="categoryTableBody">
-                                    <!-- Render bằng JS -->
-                                </tbody>
+                                <tbody id="categoryTableBody"></tbody>
                             </table>
                         </div>
                     </div>
                 </div>
-
             </div>
         </main>
     </div>
@@ -321,7 +306,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
             <div class="modal-body">
                 <form id="productForm" enctype="multipart/form-data">
                     <input type="hidden" id="editId" value="" />
-                    <input type="hidden" id="hinAnhOld" value="" />
+                    <input type="hidden" id="hinhAnhOld" value="" />
                     <div class="form-row">
                         <div class="form-group">
                             <label for="productMa">Mã sản phẩm <span class="required">*</span></label>
@@ -335,9 +320,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
                     <div class="form-row">
                         <div class="form-group">
                             <label for="productCategory">Danh mục <span class="required">*</span></label>
-                            <select id="productCategory" required>
-                                <option value="">Chọn danh mục</option>
-                            </select>
+                            <select id="productCategory" required><option value="">Chọn danh mục</option></select>
                         </div>
                         <div class="form-group">
                             <label for="productPrice">Giá (VNĐ) <span class="required">*</span></label>
@@ -346,13 +329,19 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="productImage">Hình ảnh</label>
-                            <input type="file" id="productImage" accept="image/*" />
-                            <div id="currentImage" style="margin-top:5px;"></div>
+                            <label for="productDonViTinh">Đơn vị tính</label>
+                            <input type="text" id="productDonViTinh" placeholder="VD: kg, hộp, túi,..." />
                         </div>
                         <div class="form-group">
                             <label for="productHan">Hạn sử dụng</label>
                             <input type="text" id="productHan" placeholder="VD: 12 tháng" />
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="productImage">Hình ảnh</label>
+                            <input type="file" id="productImage" accept="image/*" />
+                            <div id="currentImage" style="margin-top:5px;"></div>
                         </div>
                     </div>
                     <div class="form-group">

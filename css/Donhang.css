@@ -270,38 +270,19 @@ a { text-decoration: none; color: inherit; }
 
 /* ===== STATUS ===== */
 .status { padding: 4px 10px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; }
-.status-pending {
-    background: #fff3cd;
-    color: #856404;
-}
-.status-processing {
-    background: #cce5ff;
-    color: #004085;
-}
-.status-shipped {
-    background: #d4edda;
-    color: #155724;
-}
-.status-delivered {
-    background: #d4edda;
-    color: #155724;
-}
+.status-success { background: #d4edda; color: #155724; }
+.status-warning { background: #fff3cd; color: #856404; }
+.status-danger { background: #f8d7da; color: #721c24; }
+.status-info { background: #d1ecf1; color: #0c5460; }
+.status-primary { background: #cce5ff; color: #004085; }
 .status-secondary { background: #e2e3e5; color: #383d41; }
 
 /* ===== ACTION BUTTONS ===== */
-.action-btn {
-    background: none;
-    border: none;
-    padding: 6px 8px;
-    cursor: pointer;
-    font-size: 1rem;
-    border-radius: var(--radius-sm);
-    transition: var(--transition);
+.table-actions a {
+    margin: 0 5px;
+    color: #2c7be0;
 }
-.action-btn.view { color: var(--green-dark); }
-.action-btn.view:hover { background: var(--green-light); }
-.action-btn.edit { color: var(--pink); }
-.action-btn.edit:hover { background: var(--pink-pale); }
+.table-actions a:hover { color: #1a5bb5; }
 
 /* ===== PAGINATION ===== */
 .pagination-container {
@@ -354,7 +335,7 @@ a { text-decoration: none; color: inherit; }
     align-items: center;
     backdrop-filter: blur(4px);
 }
-.modal-overlay.open { display: flex; }
+.modal-overlay.active { display: flex; }
 
 .modal {
     background: var(--white);
@@ -411,6 +392,17 @@ a { text-decoration: none; color: inherit; }
 
 .modal-footer .btn-sm { padding: 8px 24px; font-size: 0.85rem; }
 
+/* ===== NÚT IN TRONG MODAL ===== */
+.btn-success {
+    background: #28a745;
+    color: #fff;
+    border: none;
+    padding: 6px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.btn-success:hover { background: #218838; }
+
 /* ===== FORM ===== */
 .form-group {
     display: flex;
@@ -440,65 +432,6 @@ a { text-decoration: none; color: inherit; }
     border-color: var(--pink);
     background: var(--white);
     box-shadow: 0 0 0 4px rgba(255, 0, 144, 0.08);
-}
-
-/* ===== ORDER DETAIL ===== */
-.order-detail-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    margin-bottom: 20px;
-}
-
-.order-detail-item {
-    padding: 8px 0;
-    border-bottom: 1px solid var(--gray-200);
-}
-
-.order-detail-item strong {
-    display: block;
-    font-size: 0.8rem;
-    color: var(--gray-400);
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-}
-
-.order-detail-item span {
-    font-size: 1rem;
-    color: var(--gray-600);
-}
-
-.order-products-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 12px;
-}
-
-.order-products-table th {
-    background: var(--gray-100);
-    padding: 8px 12px;
-    text-align: left;
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--gray-600);
-    text-transform: uppercase;
-}
-
-.order-products-table td {
-    padding: 8px 12px;
-    font-size: 0.9rem;
-    color: var(--gray-600);
-    border-bottom: 1px solid var(--gray-200);
-}
-
-.order-total {
-    text-align: right;
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: var(--pink);
-    margin-top: 12px;
-    padding-top: 12px;
-    border-top: 2px solid var(--gray-200);
 }
 
 /* ===== TOAST ===== */
@@ -543,15 +476,14 @@ a { text-decoration: none; color: inherit; }
     .stat-card { padding: 14px 16px; }
     .stat-card .stat-icon { width: 42px; height: 42px; font-size: 1.2rem; }
     .stat-info h3 { font-size: 1.2rem; }
-    .order-detail-grid { grid-template-columns: 1fr; }
     .table-card table { font-size: 0.8rem; }
     .table-card table th, .table-card table td { padding: 8px 10px; }
+    .modal { width: 98%; margin: 10px; }
 }
 
 @media (max-width: 480px) {
     .main-content { margin-left: 0; }
     .stats-grid { grid-template-columns: 1fr; }
-    .modal { width: 98%; margin: 10px; }
     .admin-avatar span { display: none; }
     .header-left h2 { font-size: 1.1rem; }
 }
