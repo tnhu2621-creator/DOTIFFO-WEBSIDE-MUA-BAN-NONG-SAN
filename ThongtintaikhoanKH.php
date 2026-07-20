@@ -21,23 +21,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_avatar'])) {
         exit;
     }
 
-    // Chuyển base64 thành file
     $uploadDir = 'images/avatar/';
     if (!is_dir($uploadDir)) {
         mkdir($uploadDir, 0755, true);
     }
 
-    // Tạo tên file duy nhất
+    // Tên file chứa ID user và timestamp => luôn duy nhất
     $ext = 'png';
     $filename = 'avatar_' . $user_id . '_' . time() . '.' . $ext;
     $filepath = $uploadDir . $filename;
 
-    // Giải mã base64 và lưu file
     $data = explode(',', $avatarData);
     if (count($data) === 2) {
         $imageData = base64_decode($data[1]);
         if (file_put_contents($filepath, $imageData)) {
-            // Cập nhật database với đường dẫn tương đối
             $avatarPath = $filepath;
             $stmt = $pdo->prepare("UPDATE nguoidung SET HinhAnh = ? WHERE MaNguoiDung = ?");
             if ($stmt->execute([$avatarPath, $user_id])) {
@@ -56,9 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_avatar'])) {
     exit;
 }
 
-// ---- KẾT THÚC AJAX ----
-
-// Lấy thông tin người dùng
+// ---- Lấy thông tin người dùng ----
 $stmt = $pdo->prepare("
     SELECT MaNguoiDung, TenDangNhap, HoTen, Email, SoDienThoai, DiaChi, HinhAnh, MatKhau
     FROM nguoidung
@@ -120,7 +115,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
     }
 }
 
-// Xử lý đổi mật khẩu (giữ nguyên logic)
+// Xử lý đổi mật khẩu
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
     $current = $_POST['currentPassword'] ?? '';
     $new = $_POST['newPassword'] ?? '';
@@ -207,9 +202,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
                     <div class="avatar-section">
                         <div class="avatar-wrapper" id="avatarWrapper">
                             <?php 
-                                $avatarSrc = !empty($user['HinhAnh']) && file_exists($user['HinhAnh']) 
-                                    ? htmlspecialchars($user['HinhAnh']) 
-                                    : 'https://ui-avatars.com/api/?name=' . urlencode($user['HoTen']) . '&background=008919&color=fff&size=120';
+                                // === THÊM TIMESTAMP VÀO URL ẢNH ĐỂ CHỐNG CACHE ===
+                                // Lấy thời gian sửa đổi file để làm version
+                                $avatarSrc = '';
+                                if (!empty($user['HinhAnh']) && file_exists($user['HinhAnh'])) {
+                                    $avatarSrc = htmlspecialchars($user['HinhAnh']) . '?v=' . filemtime($user['HinhAnh']);
+                                } else {
+                                    $avatarSrc = 'https://ui-avatars.com/api/?name=' . urlencode($user['HoTen']) . '&background=008919&color=fff&size=120';
+                                }
                             ?>
                             <img id="avatarPreview" src="<?= $avatarSrc ?>" alt="Avatar" />
                             <div class="avatar-overlay">
