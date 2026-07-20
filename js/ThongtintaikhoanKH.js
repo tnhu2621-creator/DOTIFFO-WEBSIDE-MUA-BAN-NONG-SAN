@@ -60,17 +60,7 @@
     }
 
     // ===== AVATAR FUNCTIONS =====
-    function loadAvatar() {
-        const savedAvatar = localStorage.getItem('userAvatar');
-        if (savedAvatar) {
-            avatarPreview.src = savedAvatar;
-            avatarSamples.forEach(sample => {
-                if (savedAvatar === sample.url) {
-                    selectedAvatarId = sample.id;
-                }
-            });
-        }
-    }
+    // KHÔNG dùng localStorage nữa → hoàn toàn dựa vào server
 
     function saveAvatar(imageData) {
         const formData = new FormData();
@@ -84,12 +74,14 @@
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                avatarPreview.src = imageData;
+                const newAvatar = data.avatar || imageData;
+                // Thêm timestamp vào URL để tránh cache
+                avatarPreview.src = newAvatar + '?v=' + Date.now();
                 const avatarHidden = document.getElementById('avatarHidden');
-                if (avatarHidden) avatarHidden.value = imageData;
-                localStorage.setItem('userAvatar', imageData);
+                if (avatarHidden) avatarHidden.value = newAvatar;
                 showToast('Đã cập nhật ảnh đại diện!');
                 closeAvatarModal();
+                // Reload trang để đồng bộ session và header
                 setTimeout(() => window.location.reload(), 500);
             } else {
                 showToast('Lỗi: ' + (data.message || 'Không thể cập nhật'), 'error');
@@ -226,69 +218,46 @@
 
     // ===== UPDATE PROFILE =====
     profileForm.addEventListener('submit', function(e) {
-        e.preventDefault();
         const fullname = document.getElementById('fullname').value.trim();
         const email = document.getElementById('email').value.trim();
-        const phone = document.getElementById('phone').value.trim();
-        const address = document.getElementById('address').value.trim();
 
         if (!fullname || !email) {
+            e.preventDefault();
             showFormMessage(profileMessage, 'Vui lòng điền đầy đủ họ tên và email.', 'error');
             return;
         }
         if (!email.includes('@')) {
+            e.preventDefault();
             showFormMessage(profileMessage, 'Email không hợp lệ.', 'error');
             return;
         }
-
-        const avatarNameEl = document.querySelector('.avatar-name');
-        if (avatarNameEl) avatarNameEl.textContent = fullname;
-
-        if (!localStorage.getItem('userAvatar')) {
-            const newAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(fullname)}&background=008919&color=fff&size=120`;
-            avatarPreview.src = newAvatar;
-            try { localStorage.setItem('userAvatar', newAvatar); } catch(e) {}
-        }
-
-        console.log('Cập nhật thông tin:', { fullname, email, phone, address });
-        showFormMessage(profileMessage, '✅ Cập nhật thông tin thành công!', 'success');
-        showToast('Đã cập nhật thông tin cá nhân!');
-        // Không reload vì form sẽ gửi thực tế nếu bỏ e.preventDefault()? 
-        // Ở đây profileForm vẫn dùng e.preventDefault() và không gửi form, nhưng bạn có thể thay đổi nếu muốn.
-        // Tôi giữ nguyên cho profile vì không ảnh hưởng đến yêu cầu hiện tại.
+        // Cho phép form submit bình thường
     });
 
-    // ===== CHANGE PASSWORD (đã sửa để gửi form) =====
+    // ===== CHANGE PASSWORD =====
     passwordForm.addEventListener('submit', function(e) {
-        // Không dùng e.preventDefault() để form gửi đi bình thường
-        // Nhưng vẫn kiểm tra client trước khi submit
+        const current = document.getElementById('currentPassword').value;
+        const newPass = document.getElementById('newPassword').value;
+        const confirm = document.getElementById('confirmPassword').value;
 
-        const currentPassword = document.getElementById('currentPassword').value;
-        const newPassword = document.getElementById('newPassword').value;
-        const confirmPassword = document.getElementById('confirmPassword').value;
-
-        // Nếu có lỗi client thì chặn submit và hiển thị lỗi
-        if (!currentPassword || !newPassword || !confirmPassword) {
+        if (!current || !newPass || !confirm) {
             e.preventDefault();
             showFormMessage(passwordMessage, 'Vui lòng điền đầy đủ các trường.', 'error');
             return;
         }
-        if (newPassword.length < 6) {
+        if (newPass.length < 6) {
             e.preventDefault();
             showFormMessage(passwordMessage, 'Mật khẩu mới phải có ít nhất 6 ký tự.', 'error');
             return;
         }
-        if (newPassword !== confirmPassword) {
+        if (newPass !== confirm) {
             e.preventDefault();
             showFormMessage(passwordMessage, 'Mật khẩu xác nhận không khớp.', 'error');
             return;
         }
-
-        console.log('Đang gửi form đổi mật khẩu...');
-        // Không có e.preventDefault() ở đây → form sẽ submit.
+        // Cho phép form submit
     });
 
     // ===== INIT =====
-    loadAvatar();
     console.log('👤 Trang thông tin tài khoản đã sẵn sàng!');
 })();
