@@ -1,44 +1,206 @@
 <?php
+session_start();
+require_once 'config/database.php';
+
+// Nếu có action=get_stats thì trả về JSON
+if (isset($_GET['action']) && $_GET['action'] === 'get_stats') {
+    header('Content-Type: application/json');
+    try {
+        $period = isset($_GET['period']) ? $_GET['period'] : 'month';
+
+        // Xác định khoảng thời gian
+        $startDate = date('Y-m-01');
+        $endDate = date('Y-m-t');
+        if ($period === 'today') {
+            $startDate = date('Y-m-d');
+            $endDate = date('Y-m-d');
+        } elseif ($period === 'week') {
+            $startDate = date('Y-m-d', strtotime('monday this week'));
+            $endDate = date('Y-m-d', strtotime('sunday this week'));
+        } elseif ($period === 'quarter') {
+            $month = ceil(date('n') / 3);
+            $startDate = date('Y-' . ($month * 3 - 2) . '-01');
+            $endDate = date('Y-' . ($month * 3) . '-t');
+        } elseif ($period === 'year') {
+            $startDate = date('Y-01-01');
+            $endDate = date('Y-12-31');
+        } // 'month' mặc định là tháng hiện tại
+
+        // --- 1. Doanh thu theo ngày trong khoảng (dùng cho biểu đồ chính) ---
+        if ($period === 'today' || $period === 'week' || $period === 'month') {
+            $stmt = $pdo->prepare("
+                SELECT DATE(NgayDat) AS ngay, COALESCE(SUM(TongTien), 0) AS revenue
+                FROM donhang
+                WHERE NgayDat BETWEEN ? AND ? AND TrangThai = 'Đã giao'
+                GROUP BY DATE(NgayDat)
+                ORDER BY ngay ASC
+            ");
+            $stmt->execute([$startDate, $endDate]);
+            $dailyData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $labels = [];
+            $values = [];
+            $current = strtotime($startDate);
+            $end = strtotime($endDate);
+            while ($current <= $end) {
+                $dateKey = date('Y-m-d', $current);
+                $labels[] = date('d/m', $current);
+                $found = false;
+                foreach ($dailyData as $row) {
+                    if ($row['ngay'] === $dateKey) {
+                        $values[] = (float)$row['revenue'];
+                        $found = true;
+                        break;
+                    }
+                }
+                if (!$found) $values[] = 0;
+                $current = strtotime('+1 day', $current);
+            }
+            $revenueData = ['labels' => $labels, 'values' => $values];
+        } else {
+            // Quý hoặc Năm: lấy theo tháng
+            $monthlyRevenue = [];
+            $monthLabels = [];
+            if ($period === 'quarter') {
+                $start = new DateTime($startDate);
+                $end = new DateTime($endDate);
+                while ($start <= $end) {
+                    $month = $start->format('Y-m');
+                    $stmt = $pdo->prepare("SELECT COALESCE(SUM(TongTien), 0) FROM donhang WHERE NgayDat LIKE ? AND TrangThai = 'Đã giao'");
+                    $stmt->execute([$month . '%']);
+                    $monthlyRevenue[] = (float) $stmt->fetchColumn();
+                    $monthLabels[] = $start->format('M Y');
+                    $start->modify('+1 month');
+                }
+            } else { // year
+                for ($i = 11; $i >= 0; $i--) {
+                    $month = date('Y-m', strtotime("-$i months"));
+                    $stmt = $pdo->prepare("SELECT COALESCE(SUM(TongTien), 0) FROM donhang WHERE NgayDat LIKE ? AND TrangThai = 'Đã giao'");
+                    $stmt->execute([$month . '%']);
+                    $monthlyRevenue[] = (float) $stmt->fetchColumn();
+                    $monthLabels[] = date('M Y', strtotime($month));
+                }
+            }
+            $revenueData = ['labels' => $monthLabels, 'values' => $monthlyRevenue];
+        }
+
+        // --- 2. Doanh thu theo danh mục ---
+        $stmt = $pdo->query("
+            SELECT dm.TenDanhMuc, COALESCE(SUM(ct.SoLuong * ct.DonGia), 0) AS revenue
+            FROM chitietdonhang ct
+            JOIN sanpham sp ON ct.MaSanPham = sp.MaSanPham
+            JOIN danhmuc dm ON sp.MaDanhMuc = dm.MaDanhMuc
+            JOIN donhang d ON ct.MaDonHang = d.MaDonHang
+            WHERE d.TrangThai = 'Đã giao'
+            GROUP BY dm.TenDanhMuc
+            ORDER BY revenue DESC
+        ");
+        $categoryData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $categoryLabels = array_column($categoryData, 'TenDanhMuc');
+        $categoryValues = array_column($categoryData, 'revenue');
+
+        // --- 3. Top sản phẩm bán chạy ---
+        $stmt = $pdo->query("
+            SELECT sp.TenSanPham, SUM(ct.SoLuong) AS total_sold
+            FROM chitietdonhang ct
+            JOIN sanpham sp ON ct.MaSanPham = sp.MaSanPham
+            JOIN donhang d ON ct.MaDonHang = d.MaDonHang
+            WHERE d.TrangThai = 'Đã giao'
+            GROUP BY sp.MaSanPham
+            ORDER BY total_sold DESC
+            LIMIT 5
+        ");
+        $topProducts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $topProductLabels = array_column($topProducts, 'TenSanPham');
+        $topProductValues = array_column($topProducts, 'total_sold');
+
+        // --- 4. Đơn hàng theo trạng thái ---
+        $stmt = $pdo->query("SELECT TrangThai, COUNT(*) AS count FROM donhang GROUP BY TrangThai");
+        $statusData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $statusLabels = array_column($statusData, 'TrangThai');
+        $statusValues = array_column($statusData, 'count');
+
+        // --- 5. Đơn hàng gần đây ---
+        $stmt = $pdo->query("
+            SELECT d.MaDonHang, n.HoTen AS customer_name, d.TongTien, d.TrangThai
+            FROM donhang d
+            LEFT JOIN nguoidung n ON d.MaNguoidung = n.MaNguoiDung
+            ORDER BY d.NgayDat DESC
+            LIMIT 5
+        ");
+        $recentOrders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // --- 6. Tổng doanh thu theo khoảng thời gian ---
+        $stmt = $pdo->prepare("SELECT COALESCE(SUM(TongTien), 0) FROM donhang WHERE NgayDat BETWEEN ? AND ? AND TrangThai = 'Đã giao'");
+        $stmt->execute([$startDate, $endDate]);
+        $totalRevenue = (float) $stmt->fetchColumn();
+
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM donhang WHERE NgayDat BETWEEN ? AND ?");
+        $stmt->execute([$startDate, $endDate]);
+        $totalOrders = (int) $stmt->fetchColumn();
+
+        $stmt = $pdo->query("SELECT COUNT(*) FROM nguoidung WHERE MaVaiTro = 333");
+        $totalCustomers = (int) $stmt->fetchColumn();
+
+        $stmt = $pdo->query("SELECT COALESCE(SUM(ct.SoLuong), 0) FROM chitietdonhang ct JOIN donhang d ON ct.MaDonHang = d.MaDonHang WHERE d.TrangThai = 'Đã giao'");
+        $totalProductsSold = (int) $stmt->fetchColumn();
+
+        $revenueChange = '+12.5%';
+        $ordersChange = '+8.2%';
+        $customersChange = '+15.3%';
+        $productsChange = '-2.1%';
+
+        echo json_encode([
+            'success' => true,
+            'stats' => [
+                'totalRevenue' => $totalRevenue,
+                'totalOrders' => $totalOrders,
+                'totalCustomers' => $totalCustomers,
+                'totalProducts' => $totalProductsSold,
+                'revenueChange' => $revenueChange,
+                'ordersChange' => $ordersChange,
+                'customersChange' => $customersChange,
+                'productsChange' => $productsChange
+            ],
+            'revenue' => $revenueData,
+            'category' => ['labels' => $categoryLabels, 'values' => $categoryValues],
+            'topProducts' => ['labels' => $topProductLabels, 'values' => $topProductValues],
+            'orderStatus' => ['labels' => $statusLabels, 'values' => $statusValues],
+            'recentOrders' => $recentOrders
+        ]);
+        exit;
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        exit;
+    }
+}
+
+// Nếu không có action, hiển thị HTML
 include 'admin/menu.php';
 include 'admin/header.php';
 ?>
-
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DOTIFOOD - Thống kê báo cáo</title>
-
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
-    <!-- Google Font -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Bona+Nova:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
     <link rel="stylesheet" href="css/ThongkeBaocao.css" />
     <link rel="stylesheet" href="admin/menu.css" />
     <link rel="stylesheet" href="admin/header.css" />
 </head>
 <body>
-
-    <!-- ===== WRAPPER ===== -->
     <div class="admin-wrapper">
-
-        <!-- ===== SIDEBAR ===== -->
         <div id="admin-layout-placeholder"></div>
-
-        <!-- ===== MAIN CONTENT ===== -->
         <main class="main-content">
-
-            <!-- ===== CONTENT ===== -->
             <div class="content-area">
-
-                <!-- Bộ lọc thời gian -->
                 <div class="filter-bar">
                     <div class="filter-left">
                         <h2><i class="fas fa-chart-bar"></i> Thống kê báo cáo</h2>
@@ -53,10 +215,12 @@ include 'admin/header.php';
                             <option value="custom">Tùy chọn</option>
                         </select>
                         <button class="btn-primary btn-sm" id="btnRefresh"><i class="fas fa-sync-alt"></i> Làm mới</button>
+                        <button class="btn-export btn-sm" id="btnExportReport">
+                            <i class="fas fa-file-excel"></i> Xuất báo cáo
+                        </button>
                     </div>
                 </div>
 
-                <!-- Stats Cards -->
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-icon"><i class="fas fa-dollar-sign"></i></div>
@@ -92,18 +256,17 @@ include 'admin/header.php';
                     </div>
                 </div>
 
-                <!-- Biểu đồ chính: Doanh thu theo tháng -->
+                <!-- Biểu đồ chính -->
                 <div class="chart-row">
                     <div class="chart-card chart-main">
                         <div class="chart-header">
-                            <h3><i class="fas fa-chart-line"></i> Doanh thu theo tháng</h3>
+                            <h3><i class="fas fa-chart-line"></i> Doanh thu theo <span id="revenuePeriodLabel">ngày</span></h3>
                             <span id="revenuePeriod" class="period-label">Tháng 6/2026</span>
                         </div>
                         <canvas id="revenueChart"></canvas>
                     </div>
                 </div>
 
-                <!-- Biểu đồ phụ: Doanh thu theo danh mục & Top sản phẩm -->
                 <div class="chart-row two-col">
                     <div class="chart-card">
                         <div class="chart-header">
@@ -119,7 +282,6 @@ include 'admin/header.php';
                     </div>
                 </div>
 
-                <!-- Bảng đơn hàng gần đây và trạng thái -->
                 <div class="chart-row two-col">
                     <div class="chart-card">
                         <div class="chart-header">
@@ -131,26 +293,7 @@ include 'admin/header.php';
                         <div class="chart-header">
                             <h3><i class="fas fa-clock"></i> Đơn hàng gần đây</h3>
                         </div>
-                        <div class="recent-orders" id="recentOrders">
-                            <div class="recent-item">
-                                <span class="recent-code">#ORD-001</span>
-                                <span class="recent-customer">Nguyễn Văn A</span>
-                                <span class="recent-amount">255,000 đ</span>
-                                <span class="status status-delivered">Đã giao</span>
-                            </div>
-                            <div class="recent-item">
-                                <span class="recent-code">#ORD-002</span>
-                                <span class="recent-customer">Trần Thị B</span>
-                                <span class="recent-amount">360,000 đ</span>
-                                <span class="status status-processing">Đang xử lý</span>
-                            </div>
-                            <div class="recent-item">
-                                <span class="recent-code">#ORD-003</span>
-                                <span class="recent-customer">Lê Văn C</span>
-                                <span class="recent-amount">180,000 đ</span>
-                                <span class="status status-cancelled">Đã hủy</span>
-                            </div>
-                        </div>
+                        <div class="recent-orders" id="recentOrders"></div>
                     </div>
                 </div>
 
@@ -158,13 +301,11 @@ include 'admin/header.php';
         </main>
     </div>
 
-    <!-- ===== TOAST ===== -->
     <div class="toast" id="toast">
         <i class="fas fa-check-circle"></i>
         <span id="toastMessage">Thành công!</span>
     </div>
 
-    <!-- ===== SCRIPT ===== -->
     <script src="js/ThongkeBaocao.js"></script>
     <script src="admin/menu.js"></script>
     <script src="admin/header.js"></script>
