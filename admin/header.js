@@ -3,22 +3,27 @@
 
     function loadHeader() {
         const placeholder = document.getElementById('header-placeholder');
-        if (!placeholder) return;
-
-        fetch('admin/header.php')
-            .then(response => {
-                if (!response.ok) throw new Error('Network response was not ok');
-                return response.text();
-            })
-            .then(html => {
-                placeholder.innerHTML = html;
-                initHeaderEvents();
-                updatePageTitle(); // Cập nhật tiêu đề ngay sau khi load
-            })
-            .catch(err => {
-                console.warn('Không thể tải header:', err);
-                placeholder.innerHTML = '<p style="color:red; padding:20px; text-align:center;">⚠️ Không thể tải header.</p>';
-            });
+        if (placeholder) {
+            // Trường hợp header được tải bằng fetch
+            fetch('admin/header.php')
+                .then(response => {
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    return response.text();
+                })
+                .then(html => {
+                    placeholder.innerHTML = html;
+                    initHeaderEvents();
+                    updatePageTitle();
+                })
+                .catch(err => {
+                    console.warn('Không thể tải header:', err);
+                    placeholder.innerHTML = '<p style="color:red; padding:20px; text-align:center;">⚠️ Không thể tải header.</p>';
+                });
+        } else {
+            // Trường hợp header đã được include trực tiếp
+            initHeaderEvents();
+            updatePageTitle();
+        }
     }
 
     function initHeaderEvents() {
@@ -36,7 +41,7 @@
             });
         }
 
-        // Sự kiện tìm kiếm
+        // Sự kiện tìm kiếm (nếu có)
         const searchInput = document.getElementById('searchInput');
         if (searchInput) {
             searchInput.addEventListener('keyup', function(e) {
@@ -57,10 +62,10 @@
         const titleMap = {
             'Tongquan.php': 'Tổng quan',
             'Qlsanpham.php': 'Quản lý sản phẩm',
-            'Donhang.php': 'Đơn hàng',
+            'Donhang.php': 'Quản lý đơn hàng',
             'Qlkho.php': 'Quản lý kho',
             'QuanlyNhanvien.php': 'Quản lý nhân viên',
-            'ThongtinKhachhang.php': 'Thông tin khách hàng',
+            'QuanlyKhachhang.php': 'Thông tin khách hàng',
             'ThongkeBaocao.php': 'Thống kê báo cáo'
         };
         const pageTitle = document.getElementById('pageTitle');
@@ -87,6 +92,6 @@
         }
     });
 
-    // Xuất hàm để có thể gọi từ bên ngoài (nếu cần)
+    // Xuất hàm ra ngoài (nếu cần)
     window.updatePageTitle = updatePageTitle;
 })();

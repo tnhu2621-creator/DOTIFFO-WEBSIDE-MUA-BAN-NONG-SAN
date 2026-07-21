@@ -519,3 +519,8 @@ a { text-decoration: none; color: inherit; }
     .table-card table th, .table-card table td { padding: 8px 10px; }
     .modal { width: 98%; margin: 10px; }
 }
+
+/* Đảm bảo bấm vào icon vẫn tính là bấm vào nút */
+.action-btn i {
+    pointer-events: none;
+}

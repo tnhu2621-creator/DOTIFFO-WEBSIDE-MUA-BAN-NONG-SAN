@@ -1,380 +1,335 @@
-document.addEventListener('DOMContentLoaded', function() {
-    let currentStatus = 'all';
+document.addEventListener('DOMContentLoaded', function () {
+    // ---- Khai báo State điều khiển hệ thống ----
+    let currentStatusFilter = 'all';
+    let currentDateFrom = '';
+    let currentDateTo = '';
     let currentPage = 1;
-    let dateFrom = '';
-    let dateTo = '';
-    let currentOrderId = null;
+    let currentSelectedOrderIdForPrint = null;
 
+    // ---- DOM Elements ----
     const orderTableBody = document.getElementById('orderTableBody');
+    const orderCountText = document.getElementById('orderCount');
+    const pageInfo = document.getElementById('pageInfo');
+    const prevPageBtn = document.getElementById('prevPage');
+    const nextPageBtn = document.getElementById('nextPage');
+
+    // Thống kê
     const totalOrdersEl = document.getElementById('totalOrders');
     const pendingOrdersEl = document.getElementById('pendingOrders');
     const shippingOrdersEl = document.getElementById('shippingOrders');
     const completedOrdersEl = document.getElementById('completedOrders');
-    const orderCountEl = document.getElementById('orderCount');
-    const pageInfoEl = document.getElementById('pageInfo');
-    const prevBtn = document.getElementById('prevPage');
-    const nextBtn = document.getElementById('nextPage');
-    const filterTabs = document.querySelectorAll('.filter-tab');
+
+    // Bộ lọc
+    const filterTabs = document.getElementById('filterTabs');
     const dateFromInput = document.getElementById('dateFrom');
     const dateToInput = document.getElementById('dateTo');
-    const filterDateBtn = document.getElementById('btnFilterDate');
+    const btnFilterDate = document.getElementById('btnFilterDate');
 
+    // Modal Chi tiết
     const orderModal = document.getElementById('orderModal');
+    const orderDetailContent = document.getElementById('orderDetailContent');
     const modalClose = document.getElementById('modalClose');
     const modalCloseBtn = document.getElementById('modalCloseBtn');
-    const orderDetailContent = document.getElementById('orderDetailContent');
     const printOrderBtn = document.getElementById('printOrderBtn');
 
+    // Modal Cập nhật trạng thái
     const statusModal = document.getElementById('statusModal');
     const statusModalClose = document.getElementById('statusModalClose');
     const statusModalCancel = document.getElementById('statusModalCancel');
-    const statusOrderId = document.getElementById('statusOrderId');
-    const newStatusSelect = document.getElementById('newStatus');
     const statusModalSave = document.getElementById('statusModalSave');
-
-    // Lý do hủy
+    const newStatusSelect = document.getElementById('newStatus');
     const cancelReasonGroup = document.getElementById('cancelReasonGroup');
-    const cancelReason = document.getElementById('cancelReason');
+    const cancelReasonSelect = document.getElementById('cancelReason');
     const otherReasonGroup = document.getElementById('otherReasonGroup');
-    const otherReason = document.getElementById('otherReason');
+    const otherReasonInput = document.getElementById('otherReason');
+    const statusOrderIdInput = document.getElementById('statusOrderId');
 
-    const toast = document.getElementById('toast');
-    const toastMessage = document.getElementById('toastMessage');
-    let toastTimer;
+    // ---- Khởi chạy lần đầu ----
+    fetchStats();
+    fetchOrders();
 
-    function showToast(msg, isSuccess = true) {
-        toastMessage.textContent = msg;
-        toast.className = 'toast show ' + (isSuccess ? '' : 'error');
-        clearTimeout(toastTimer);
-        toastTimer = setTimeout(() => toast.classList.remove('show'), 3000);
-    }
-
-    function fetchAPI(action, params = {}, method = 'GET') {
-        let url = 'Donhang.php?action=' + action;
-        if (method === 'GET') {
-            const query = new URLSearchParams(params).toString();
-            if (query) url += '&' + query;
-            return fetch(url)
-                .then(res => {
-                    if (!res.ok) throw new Error('HTTP ' + res.status);
-                    return res.json();
-                })
-                .catch(err => {
-                    return fetch(url).then(res => res.text()).then(text => {
-                        throw new Error('Server error: ' + text.substring(0, 200));
-                    });
-                });
-        } else {
-            return fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: new URLSearchParams(params)
-            })
-            .then(res => {
-                if (!res.ok) throw new Error('HTTP ' + res.status);
-                return res.json();
-            })
-            .catch(err => {
-                return fetch(url, { method: 'POST', body: new URLSearchParams(params) })
-                    .then(res => res.text())
-                    .then(text => {
-                        throw new Error('Server error: ' + text.substring(0, 200));
-                    });
-            });
-        }
-    }
-
-    function loadStats() {
-        fetchAPI('get_stats')
+    // ---- Đọc Dữ liệu Thống Kê ----
+    function fetchStats() {
+        fetch('Donhang.php?action=get_stats')
+            .then(res => res.json())
             .then(data => {
-                if (data.error) {
-                    showToast('Lỗi: ' + data.error, false);
-                    return;
-                }
-                totalOrdersEl.textContent = data.total || 0;
-                pendingOrdersEl.textContent = data.pending || 0;
-                shippingOrdersEl.textContent = data.shipped || 0;
-                completedOrdersEl.textContent = data.delivered || 0;
+                if(data.error) return;
+                totalOrdersEl.textContent = data.total;
+                pendingOrdersEl.textContent = data.pending;
+                shippingOrdersEl.textContent = data.shipped;
+                completedOrdersEl.textContent = data.delivered;
             })
-            .catch(err => {
-                showToast('Không thể tải thống kê: ' + err.message, false);
-            });
+            .catch(err => console.error("Lỗi tải thống kê:", err));
     }
 
-    function loadOrders(status, page, from, to) {
-        const params = { status, page, dateFrom: from || '', dateTo: to || '' };
-        fetchAPI('get_orders', params)
+    // ---- Đọc Danh sách Đơn hàng ----
+    function fetchOrders() {
+        let url = `Donhang.php?action=get_orders&status=${currentStatusFilter}&page=${currentPage}`;
+        if (currentDateFrom) url += `&dateFrom=${currentDateFrom}`;
+        if (currentDateTo) url += `&dateTo=${currentDateTo}`;
+
+        fetch(url)
+            .then(res => res.json())
             .then(data => {
-                if (data.error) {
-                    showToast('Lỗi: ' + data.error, false);
-                    return;
-                }
-                if (data.orders) {
-                    renderOrders(data.orders);
-                    const total = data.total || 0;
-                    orderCountEl.textContent = total + ' đơn hàng';
-                    const totalPages = data.totalPages || 1;
-                    pageInfoEl.textContent = 'Trang ' + page + ' / ' + totalPages;
-                    currentPage = page;
-                    prevBtn.disabled = (page <= 1);
-                    nextBtn.disabled = (page >= totalPages);
-                } else {
-                    showToast('Không thể tải danh sách đơn hàng', false);
-                }
+                renderTable(data.orders);
+                orderCountText.textContent = `${data.total} đơn hàng`;
+                pageInfo.textContent = `Trang ${data.currentPage} / ${data.totalPages || 1}`;
+                
+                currentPage = data.currentPage;
+                prevPageBtn.disabled = (currentPage <= 1);
+                nextPageBtn.disabled = (currentPage >= data.totalPages);
             })
-            .catch(err => {
-                showToast('Lỗi kết nối: ' + err.message, false);
-            });
+            .catch(err => console.error("Lỗi tải danh sách:", err));
     }
 
-    function renderOrders(orders) {
+    // ---- Hiển thị Bảng Dữ Liệu ----
+    function renderTable(orders) {
+        orderTableBody.innerHTML = '';
         if (!orders || orders.length === 0) {
-            orderTableBody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Không có đơn hàng nào</td></tr>';
+            orderTableBody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 20px; color: #888;">Không tìm thấy đơn hàng phù hợp</td></tr>`;
             return;
         }
-        let html = '';
+
         orders.forEach(order => {
-            const isCancelled = order.TrangThai === 'Đã hủy';
-            const editButton = isCancelled ? '' : `<a href="#" data-id="${order.MaDonHang}" data-status="${order.TrangThai}" class="edit-status"><i class="fas fa-edit"></i></a>`;
+            const tr = document.createElement('tr');
+            
+            // Khóa nút sửa nếu đơn hàng ở trạng thái Đã giao hoặc Đã hủy
+            const isLocked = (order.TrangThai === 'Đã giao' || order.TrangThai === 'Đã hủy') ? 'disabled' : '';
 
-            html += `
-                <tr>
-                    <td><strong>${order.MaDonHang}</strong></td>
-                    <td>${order.customer_name || 'N/A'}</td>
-                    <td>${order.DiaChiGiaoHang || ''}</td>
-                    <td>${order.TongTienFormatted}</td>
-                    <td><span class="status ${order.statusClass}">${order.TrangThai}</span></td>
-                    <td>${order.NgayDatFormatted}</td>
-                    <td class="table-actions">
-                        <a href="#" data-id="${order.MaDonHang}" class="view-detail"><i class="fas fa-eye"></i></a>
-                        ${editButton}
-                    </td>
-                </tr>
+            tr.innerHTML = `
+                <td><strong>#${order.MaDonHang}</strong></td>
+                <td>${escapeHtml(order.customer_name || 'Khách vãng lai')}</td>
+                <td><span class="text-truncate" style="max-width:200px; display:inline-block;">${escapeHtml(order.DiaChiGiaoHang || '')}</span></td>
+                <td><span style="font-weight:600; color:#28a745;">${order.TongTienFormatted}</span></td>
+                <td><span class="status ${order.statusClass}">${order.TrangThai}</span></td>
+                <td><small>${order.NgayDatFormatted}</small></td>
+                <td>
+                    <button class="btn-action btn-view" title="Xem chi tiết" data-id="${order.MaDonHang}"><i class="fas fa-eye"></i></button>
+                    <button class="btn-action btn-edit" title="Đổi trạng thái" data-id="${order.MaDonHang}" data-status="${order.TrangThai}" ${isLocked}><i class="fas fa-edit"></i></button>
+                </td>
             `;
+            orderTableBody.appendChild(tr);
         });
-        orderTableBody.innerHTML = html;
 
-        document.querySelectorAll('.view-detail').forEach(btn => {
-            btn.addEventListener('click', function(e) {
-                e.preventDefault();
-                const orderId = this.dataset.id;
-                currentOrderId = orderId;
-                viewOrderDetail(orderId);
-            });
+        // Đăng ký sự kiện click cho các nút động trong bảng
+        trigggerTableButtons();
+    }
+
+    // ---- ĐÃ SỬA LỖI TẠI HÀM NÀY ----
+    function trigggerTableButtons() {
+        document.querySelectorAll('.btn-view').forEach(btn => {
+            btn.onclick = function() { viewOrderDetails(this.getAttribute('data-id')); };
         });
-        document.querySelectorAll('.edit-status').forEach(btn => {
-            btn.addEventListener('click', function(e) {
-                e.preventDefault();
-                const orderId = this.dataset.id;
-                const currentStatus = this.dataset.status;
-                openStatusModal(orderId, currentStatus);
-            });
+        document.querySelectorAll('.btn-edit').forEach(btn => {
+            // Thay thế "this" bằng "btn" để nhận diện đúng trạng thái của button
+            if(!btn.hasAttribute('disabled')) {
+                btn.onclick = function() { 
+                    openStatusModal(this.getAttribute('data-id'), this.getAttribute('data-status')); 
+                };
+            }
         });
     }
 
-    function viewOrderDetail(id) {
-        fetchAPI('get_detail', { id })
+    // ---- Điều khiển Bộ lọc & Phân trang ----
+    filterTabs.addEventListener('click', function (e) {
+        if (e.target.classList.contains('filter-tab')) {
+            document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+            e.target.classList.add('active');
+            currentStatusFilter = e.target.getAttribute('data-status');
+            currentPage = 1;
+            fetchOrders();
+        }
+    });
+
+    btnFilterDate.onclick = function () {
+        currentDateFrom = dateFromInput.value;
+        currentDateTo = dateToInput.value;
+        currentPage = 1;
+        fetchOrders();
+    };
+
+    prevPageBtn.onclick = function () { if (currentPage > 1) { currentPage--; fetchOrders(); } };
+    nextPageBtn.onclick = function () { currentPage++; fetchOrders(); };
+
+    // ---- Xem Chi tiết Đơn hàng ----
+    function viewOrderDetails(id) {
+        fetch(`Donhang.php?action=get_detail&id=${id}`)
+            .then(res => res.json())
             .then(data => {
-                if (data.error) {
-                    showToast('Lỗi: ' + data.error, false);
-                    return;
-                }
-                if (data.success) {
+                if(data.success) {
                     orderDetailContent.innerHTML = data.html;
-                    if (data.TrangThai === 'Đang xử lý') {
+                    currentSelectedOrderIdForPrint = id;
+                    
+                    // Chỉ cho phép in khi đơn hàng ở trạng thái "Đang xử lý"
+                    if(data.TrangThai === 'Đang xử lý') {
                         printOrderBtn.style.display = 'inline-block';
                     } else {
                         printOrderBtn.style.display = 'none';
                     }
-                    orderModal.classList.add('active');
+                    orderModal.style.display = 'flex';
                 } else {
-                    showToast(data.message || 'Không tìm thấy đơn hàng', false);
+                    showToast(data.message, true);
                 }
-            })
-            .catch(err => {
-                showToast('Lỗi tải chi tiết: ' + err.message, false);
             });
     }
 
+    printOrderBtn.onclick = function() {
+        if(currentSelectedOrderIdForPrint) {
+            window.open(`Donhang.php?action=print_order&id=${currentSelectedOrderIdForPrint}`, '_blank');
+        }
+    };
+
+    // ---- CÀI ĐẶT RÀNG BUỘC LOGIC TRÊN DROPDOWN MODAL ----
     function openStatusModal(orderId, currentStatus) {
-        statusOrderId.value = orderId;
+        statusOrderIdInput.value = orderId;
+        newStatusSelect.innerHTML = ''; // Làm rỗng các option cũ
 
-        // Reset lý do hủy
-        cancelReasonGroup.style.display = 'none';
-        cancelReason.value = '';
-        otherReasonGroup.style.display = 'none';
-        otherReason.value = '';
+        let allowedOptions = [];
 
-        let allowedStatuses = [];
-        switch (currentStatus) {
-            case 'Chờ xác nhận':
-                allowedStatuses = ['Chờ xác nhận', 'Đang xử lý', 'Đã hủy'];
-                break;
-            case 'Đang xử lý':
-                allowedStatuses = ['Đang giao', 'Đã hủy'];
-                break;
-            case 'Đang giao':
-                allowedStatuses = ['Đã giao', 'Đã hủy'];
-                break;
-            case 'Đã giao':
-                allowedStatuses = ['Đã giao'];
-                break;
-            case 'Đã hủy':
-                allowedStatuses = ['Đã hủy'];
-                break;
-            default:
-                allowedStatuses = ['Chờ xác nhận', 'Đang xử lý', 'Đang giao', 'Đã giao', 'Đã hủy'];
-                break;
-        }
-
-        const select = newStatusSelect;
-        select.innerHTML = '';
-        allowedStatuses.forEach(status => {
-            const option = document.createElement('option');
-            option.value = status;
-            option.textContent = status;
-            if (status === currentStatus) {
-                option.selected = true;
-            }
-            select.appendChild(option);
-        });
-
-        // Hiện/ẩn lý do hủy khi chọn 'Đã hủy'
-        select.addEventListener('change', function() {
-            if (this.value === 'Đã hủy') {
-                cancelReasonGroup.style.display = 'block';
-            } else {
-                cancelReasonGroup.style.display = 'none';
-                cancelReason.value = '';
-                otherReasonGroup.style.display = 'none';
-                otherReason.value = '';
-            }
-        });
-
-        // Hiện ô nhập lý do khác
-        cancelReason.addEventListener('change', function() {
-            if (this.value === 'Lý do khác (ghi rõ bên dưới)') {
-                otherReasonGroup.style.display = 'block';
-            } else {
-                otherReasonGroup.style.display = 'none';
-                otherReason.value = '';
-            }
-        });
-
-        statusModal.classList.add('active');
-    }
-
-    function closeOrderModal() {
-        orderModal.classList.remove('active');
-    }
-
-    function closeStatusModal() {
-        statusModal.classList.remove('active');
-        // Reset sự kiện change để tránh trùng lặp
-        newStatusSelect.replaceWith(newStatusSelect.cloneNode(true));
-        // Cập nhật lại biến tham chiếu
-        // (do clone nên cần gán lại)
-        // Thực tế có thể không cần vì modal sẽ được tạo lại mỗi lần mở
-    }
-
-    function updateStatus() {
-        const orderId = statusOrderId.value;
-        const newStatus = newStatusSelect.value;
-        if (!orderId) return;
-
-        let lyDoHuy = '';
-        if (newStatus === 'Đã hủy') {
-            lyDoHuy = cancelReason.value;
-            if (lyDoHuy === 'Lý do khác (ghi rõ bên dưới)') {
-                lyDoHuy = otherReason.value.trim();
-            }
-            if (!lyDoHuy) {
-                showToast('Vui lòng chọn hoặc nhập lý do hủy.', 'error');
-                return;
-            }
-        }
-
-        const params = { orderId, newStatus };
-        if (lyDoHuy) {
-            params.ly_do_huy = lyDoHuy;
-        }
-
-        fetchAPI('update_status', params, 'POST')
-            .then(data => {
-                if (data.error) {
-                    showToast('Lỗi: ' + data.error, false);
-                    return;
-                }
-                if (data.success) {
-                    showToast('Cập nhật trạng thái thành công!');
-                    closeStatusModal();
-                    loadOrders(currentStatus, currentPage, dateFrom, dateTo);
-                    loadStats();
-                } else {
-                    showToast(data.message || 'Cập nhật thất bại', false);
-                }
-            })
-            .catch(err => {
-                showToast('Lỗi kết nối: ' + err.message, false);
-            });
-    }
-
-    function printOrder() {
-        if (!currentOrderId) {
-            showToast('Không có đơn hàng để in.', false);
+        // Kiểm tra chặt chẽ luồng nghiệp vụ tại Front-end
+        if (currentStatus === 'Chờ xác nhận') {
+            allowedOptions = [
+                { value: 'Chờ xác nhận', text: 'Chờ xác nhận' },
+                { value: 'Đang xử lý', text: 'Đang xử lý' },
+                { value: 'Đã hủy', text: 'Đã hủy' }
+            ];
+        } else if (currentStatus === 'Đang xử lý') {
+            allowedOptions = [
+                { value: 'Đang xử lý', text: 'Đang xử lý' },
+                { value: 'Đang giao', text: 'Đang giao' },
+                { value: 'Đã hủy', text: 'Đã hủy' }
+            ];
+        } else if (currentStatus === 'Đang giao') {
+            allowedOptions = [
+                { value: 'Đang giao', text: 'Đang giao' },
+                { value: 'Đã giao', text: 'Đã giao' },
+                { value: 'Đã hủy', text: 'Đã hủy' }
+            ];
+        } else {
+            showToast('Đơn hàng đã chốt trạng thái (Đã giao/Đã hủy), không được phép chỉnh sửa!', true);
             return;
         }
-        const printWindow = window.open(
-            'Donhang.php?action=print_order&id=' + currentOrderId,
-            '_blank',
-            'width=800,height=600'
-        );
-        if (!printWindow) {
-            showToast('Trình duyệt chặn cửa sổ mới. Vui lòng cho phép popup.', false);
-        }
+
+        // Tạo giao diện dropdown động
+        allowedOptions.forEach(opt => {
+            const option = document.createElement('option');
+            option.value = opt.value;
+            option.textContent = opt.text;
+            if (opt.value === currentStatus) option.selected = true;
+            newStatusSelect.appendChild(option);
+        });
+
+        // Reset lại form lý do hủy về ban đầu
+        cancelReasonGroup.style.display = 'none';
+        otherReasonGroup.style.display = 'none';
+        cancelReasonSelect.value = '';
+        otherReasonInput.value = '';
+
+        statusModal.style.display = 'flex';
     }
 
-    // ===== SỰ KIỆN =====
-    filterTabs.forEach(tab => {
-        tab.addEventListener('click', function() {
-            filterTabs.forEach(t => t.classList.remove('active'));
-            this.classList.add('active');
-            currentStatus = this.dataset.status;
-            currentPage = 1;
-            loadOrders(currentStatus, currentPage, dateFrom, dateTo);
-        });
-    });
+    // Lắng nghe thay đổi của Dropdown trạng thái mới để đóng mở form hủy
+    newStatusSelect.onchange = function () {
+        if (this.value === 'Đã hủy') {
+            cancelReasonGroup.style.display = 'block';
+        } else {
+            cancelReasonGroup.style.display = 'none';
+            otherReasonGroup.style.display = 'none';
+        }
+    };
 
-    filterDateBtn.addEventListener('click', function() {
-        dateFrom = dateFromInput.value;
-        dateTo = dateToInput.value;
-        currentPage = 1;
-        loadOrders(currentStatus, currentPage, dateFrom, dateTo);
-    });
+    // Lắng nghe lý do hủy khác
+    cancelReasonSelect.onchange = function () {
+        if (this.value === 'Lý do khác (ghi rõ bên dưới)') {
+            otherReasonGroup.style.display = 'block';
+        } else {
+            otherReasonGroup.style.display = 'none';
+        }
+    };
 
-    prevBtn.addEventListener('click', function() {
-        if (currentPage > 1) loadOrders(currentStatus, currentPage - 1, dateFrom, dateTo);
-    });
-    nextBtn.addEventListener('click', function() {
-        loadOrders(currentStatus, currentPage + 1, dateFrom, dateTo);
-    });
+    // ---- Lưu Cập Nhật Trạng Thái ----
+    statusModalSave.onclick = function () {
+        const orderId = statusOrderIdInput.value;
+        const newStatus = newStatusSelect.value;
+        
+        let finalReason = '';
+        if (newStatus === 'Đã hủy') {
+            const selectedReason = cancelReasonSelect.value;
+            if (!selectedReason) {
+                showToast('Vui lòng chọn lý do hủy đơn!', true);
+                return;
+            }
+            if (selectedReason === 'Lý do khác (ghi rõ bên dưới)') {
+                finalReason = otherReasonInput.value.trim();
+                if (!finalReason) {
+                    showToast('Vui lòng nhập lý do cụ thể!', true);
+                    return;
+                }
+            } else {
+                finalReason = selectedReason;
+            }
+        }
 
-    modalClose.addEventListener('click', closeOrderModal);
-    modalCloseBtn.addEventListener('click', closeOrderModal);
-    printOrderBtn.addEventListener('click', printOrder);
+        // Tạo dữ liệu POST gửi lên PHP
+        const formData = new FormData();
+        formData.append('action', 'update_status');
+        formData.append('orderId', orderId);
+        formData.append('newStatus', newStatus);
+        formData.append('ly_do_huy', finalReason);
 
-    statusModalClose.addEventListener('click', closeStatusModal);
-    statusModalCancel.addEventListener('click', closeStatusModal);
-    statusModalSave.addEventListener('click', updateStatus);
+        fetch('Donhang.php', { method: 'POST', body: formData })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(data.message);
+                    statusModal.style.display = 'none';
+                    fetchStats();
+                    fetchOrders();
+                } else {
+                    showToast(data.message, true);
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                showToast('Đã có lỗi kết nối đến máy chủ.', true);
+            });
+    };
 
-    orderModal.addEventListener('click', function(e) {
-        if (e.target === this) closeOrderModal();
-    });
-    statusModal.addEventListener('click', function(e) {
-        if (e.target === this) closeStatusModal();
-    });
+    // ---- Đóng mở đóng mở Modals và Toast hệ thống ----
+    function closeModal() {
+        orderModal.style.display = 'none';
+        statusModal.style.display = 'none';
+    }
 
-    // Khởi tạo
-    loadStats();
-    loadOrders('all', 1, '', '');
+    modalClose.onclick = closeModal;
+    modalCloseBtn.onclick = closeModal;
+    statusModalClose.onclick = closeModal;
+    statusModalCancel.onclick = closeModal;
+
+    window.onclick = function (e) {
+        if (e.target === orderModal || e.target === statusModal) closeModal();
+    };
+
+    function showToast(message, isError = false) {
+        const toast = document.getElementById('toast');
+        const msg = document.getElementById('toastMessage');
+        msg.textContent = message;
+        
+        if (isError) {
+            toast.style.background = '#dc3545';
+            toast.querySelector('i').className = 'fas fa-exclamation-circle';
+        } else {
+            toast.style.background = '#28a745';
+            toast.querySelector('i').className = 'fas fa-check-circle';
+        }
+        
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    function escapeHtml(text) {
+        if(!text) return '';
+        const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+        return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+    }
 });

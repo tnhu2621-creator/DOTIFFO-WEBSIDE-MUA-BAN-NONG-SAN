@@ -101,7 +101,6 @@
         cartItems.innerHTML = html;
         cartTotal.textContent = formatPrice(total);
 
-        // ===== CẬP NHẬT TRẠNG THÁI NÚT THANH TOÁN (ĐÃ SỬA LỖI) =====
         const checkoutBtn = document.getElementById('checkoutBtn');
         if (checkoutBtn) {
             const selectedItems = cart.filter(item => selectedIds.has(item.id));
@@ -111,8 +110,7 @@
                 checkoutBtn.disabled = true;
                 checkoutBtn.style.opacity = '0.6';
                 checkoutBtn.title = 'Giỏ hàng trống';
-            } else if (selectedItems.length === 0) { 
-                // Kiểm tra dựa trên số lượng phần tử thực tế tìm thấy trong giỏ hàng
+            } else if (selectedItems.length === 0) {
                 checkoutBtn.disabled = true;
                 checkoutBtn.style.opacity = '0.6';
                 checkoutBtn.style.cursor = 'not-allowed';
@@ -131,18 +129,14 @@
         }
     }
 
-    // ===== HÀM ĐĂNG KÝ SỰ KIỆN GIỎ HÀNG (ĐÃ SỬA LỖI LAN TRUYỀN SỰ KIỆN) =====
     function initCartEvents() {
         const cartItems = document.getElementById('cartItems');
         if (!cartItems) return;
 
-        // Lắng nghe sự kiện thay đổi của checkbox chọn sản phẩm
         cartItems.addEventListener('change', function(e) {
             const target = e.target;
             if (target && target.classList && target.classList.contains('item-checkbox')) {
-                // Ngăn chặn sự kiện lan truyền lên các bộ lắng nghe khác
-                e.stopPropagation(); 
-                
+                e.stopPropagation();
                 const id = String(target.dataset.id);
                 if (id === '') return;
 
@@ -151,13 +145,11 @@
                 } else {
                     selectedIds.delete(id);
                 }
-                updateCartUI(); // Cập nhật lại UI và tổng tiền sau khi chọn
+                updateCartUI();
             }
         });
 
-        // Lắng nghe sự kiện click trên các nút cộng, trừ, xóa sản phẩm
         cartItems.addEventListener('click', function(e) {
-            // Chỉ xử lý nếu mục tiêu click thực sự nằm trong một thẻ button
             const target = e.target.closest('button');
             if (!target) return;
             
@@ -196,7 +188,6 @@
                         stock: parseInt(item.stock || 0),
                         is_out_of_stock: (parseInt(item.quantity) > parseInt(item.stock || 0))
                     }));
-                    // Giữ lại các sản phẩm đã chọn nếu vẫn còn trong giỏ và không hết hàng
                     selectedIds = new Set([...selectedIds].filter(id => {
                         const item = cart.find(p => p.id === id);
                         return item && !item.is_out_of_stock;
@@ -217,9 +208,10 @@
             });
     }
 
+    // ===== SỬA LỖI: gửi key 'id' đúng với backend =====
     function addToCart(productId, name, price, icon) {
         const formData = new FormData();
-        formData.append('product_id', productId);
+        formData.append('id', productId);   // đổi từ 'product_id' thành 'id'
         formData.append('quantity', 1);
 
         fetch('ThemGiohang.php', {
@@ -387,6 +379,7 @@
         });
     }
 
+    // Đưa ra toàn cục
     window.addToCart = addToCart;
     window.openCart = openCart;
     window.closeCart = closeCart;
@@ -498,7 +491,7 @@
         if (existingHeader) {
             loadCartFromServer();
             initHeaderEvents();
-            initCartEvents(); 
+            initCartEvents();
             highlightActiveMenu();
             return;
         }
@@ -514,7 +507,7 @@
                 placeholder.innerHTML = phpContent;
                 loadCartFromServer();
                 initHeaderEvents();
-                initCartEvents(); 
+                initCartEvents();
                 highlightActiveMenu();
             })
             .catch(err => {
@@ -529,7 +522,7 @@
         loadHeader();
     }
 
-    // ===== ACTIVE DROPDOWN =====
+    // Active dropdown
     document.addEventListener('DOMContentLoaded', function() {
         updateActiveLink();
     });

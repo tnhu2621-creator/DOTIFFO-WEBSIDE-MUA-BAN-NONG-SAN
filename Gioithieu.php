@@ -14,7 +14,7 @@
         <div class="about-hero-content">
             <span class="tag">Về chúng tôi</span>
             <h1>Chuyện kể từ <span>DOTIFOOD</span></h1>
-            <p>Chúng tôi mang hương vị tự nhiên từ vùng đất Đồng Tháp và Tiền Giang đến với mọi nhà, kết nối nông dân với người tiêu dùng bằng sản phẩm sạch, an toàn và chất lượng.</p>
+            <p>Chúng tôi mang hương vị tự nhiên từ vùng đất Đồng Tháp mới đến với mọi nhà, kết nối các đặc sản với người tiêu dùng bằng sản phẩm sạch, an toàn và chất lượng.</p>
             <div class="hero-stats">
                 <div class="stat">
                     <span class="number">5+</span>
@@ -46,7 +46,10 @@
             <div class="story-text">
                 <span class="tag">Câu chuyện của chúng tôi</span>
                 <h2>Khởi nguồn từ <span>tình yêu</span> với nông sản Việt</h2>
-                <p>DOTIFOOD được thành lập với mong muốn đưa nông sản sạch từ vùng đất Đồng Tháp – Tiền Giang đến gần hơn với người tiêu dùng. Chúng tôi hợp tác trực tiếp với các nông trại hữu cơ, áp dụng quy trình canh tác bền vững để bảo tồn hương vị tự nhiên của từng loại trái cây, trà sen và đặc sản địa phương.</p>
+                <p>DOTIFOOD được thành lập với mong muốn đưa nông sản sạch từ vùng đất Đồng Tháp đến gần hơn với người tiêu dùng. Đối với các dòng sản phẩm trái cây,
+                     chúng tôi lựa chọn hợp lý trực tiếp với các hợp tác nông nghiệp tại địa phương, áp dụng quy định về chất lượng an toàn tuyệt đối để đảm bảo chất lượng an toàn tuyệt đối và giữ hương vị tươi ngon khi đến tay người tiêu dùng.
+                     Không dừng lại ở đó, DOTIFOOD còn tự hào mang đến dòng trà sen Tháp Mười thượng hạng—phương thức quà tinh sinh được thủ công từ Bình sen tươi tinh khiết, mang đậm hương thơm thanh tao đặc sản của xứ Sen Hồng. 
+                     Cùng với các loại đặc sản địa phương được tuyển chọn kỹ thuật lưỡng tính từ các làng nghề truyền thống lâu đời, chúng tôi gửi những giá trị cuối cùng vào từng sản phẩm hương vị mộc mạc, đậm đà tình quê và tấm lòng hào sảng của con người miền Tây sông nước.</p>
                 <p>Mỗi sản phẩm của DOTIFOOD đều là kết tinh của sự chăm sóc tỉ mỉ từ người nông dân và trách nhiệm của chúng tôi trong việc bảo đảm chất lượng đến tay người tiêu dùng.</p>
                 <div class="story-signature">
                     <i class="fas fa-leaf"></i>

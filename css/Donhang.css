@@ -264,9 +264,32 @@ a { text-decoration: none; color: inherit; }
     font-size: 0.9rem;
     color: var(--gray-600);
     border-bottom: 1px solid var(--gray-200);
+    vertical-align: middle;
 }
 
 .table-card table tbody tr:hover { background: var(--gray-100); }
+
+/* --- TỐI ƯU KÍCH THƯỚC CÁC CỘT --- */
+
+/* Cột Địa chỉ: Thu ngắn lại để nhường không gian */
+.table-card table td:nth-child(3) .text-truncate {
+    max-width: 140px !important;
+}
+
+/* Cột Tổng tiền: Nới rộng ra và chống rớt dòng chữ đ */
+.table-card table th:nth-child(4),
+.table-card table td:nth-child(4) {
+    width: 125px;
+    white-space: nowrap;
+}
+
+/* Cột Thao tác: Đảm bảo 2 nút luôn nằm cố định trên cùng 1 hàng */
+.table-card table th:last-child,
+.table-card table td:last-child {
+    width: 100px;
+    white-space: nowrap;
+    text-align: center;
+}
 
 /* ===== STATUS ===== */
 .status { padding: 4px 10px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; }
@@ -277,12 +300,56 @@ a { text-decoration: none; color: inherit; }
 .status-primary { background: #cce5ff; color: #004085; }
 .status-secondary { background: #e2e3e5; color: #383d41; }
 
-/* ===== ACTION BUTTONS ===== */
-.table-actions a {
-    margin: 0 5px;
-    color: #2c7be0;
+/* ===== ACTION BUTTONS (ĐỒNG BỘ MÀU CHỦ ĐẠO THƯƠNG HIỆU) ===== */
+.btn-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: var(--transition);
+    margin: 0 3px;
+    vertical-align: middle;
 }
-.table-actions a:hover { color: #1a5bb5; }
+
+/* Nút xem chi tiết (Màu Hồng chủ đạo - Left) */
+.btn-view {
+    color: var(--pink);
+    background-color: var(--pink-pale);
+}
+.btn-view:hover {
+    color: #ffffff;
+    background-color: var(--pink);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 0, 144, 0.25);
+}
+
+/* Nút sửa trạng thái (Màu Xanh lá chủ đạo - Right) */
+.btn-edit {
+    color: var(--green-dark);
+    background-color: var(--green-light);
+}
+.btn-edit:hover:not([disabled]) {
+    color: #ffffff;
+    background-color: var(--green-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 137, 25, 0.25);
+}
+
+/* Trạng thái nút bị khóa khi đơn hàng Đã giao / Đã hủy */
+.btn-action[disabled], 
+.btn-action:disabled {
+    opacity: 0.4;
+    background-color: var(--gray-200) !important;
+    color: var(--gray-400) !important;
+    cursor: not-allowed !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
 
 /* ===== PAGINATION ===== */
 .pagination-container {

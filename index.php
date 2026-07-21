@@ -2,7 +2,6 @@
 include 'menu/header.php';
 require_once 'config/database.php';
 
-// --- Lấy dữ liệu sản phẩm (có kiểm tra lỗi) ---
 $randomProducts = [];
 $allProducts = [];
 
@@ -17,11 +16,9 @@ try {
         $allProducts = $stmtAll->fetchAll(PDO::FETCH_ASSOC);
     }
 } catch (PDOException $e) {
-    // Nếu có lỗi CSDL, gán mảng rỗng và có thể log lỗi
     error_log('Database error: ' . $e->getMessage());
 }
 
-// Đảm bảo biến luôn là mảng (tránh lỗi foreach)
 if (!is_array($randomProducts)) $randomProducts = [];
 if (!is_array($allProducts)) $allProducts = [];
 ?>
@@ -58,7 +55,7 @@ if (!is_array($allProducts)) $allProducts = [];
 
     <div class="filter-bar" id="filterBar">
         <button class="filter-btn active" data-filter="all">Tất cả</button>
-        <button class="filter-btn" data-filter="DM01">Trái &amp; Cây</button>
+        <button class="filter-btn" data-filter="DM01">Trái Cây</button>
         <button class="filter-btn" data-filter="DM02">Trà</button>
         <button class="filter-btn" data-filter="DM03">Đặc sản</button>
     </div>
@@ -67,10 +64,11 @@ if (!is_array($allProducts)) $allProducts = [];
         <?php if (empty($randomProducts) && empty($allProducts)): ?>
             <p class="no-products">Hiện chưa có sản phẩm nào.</p>
         <?php else: ?>
-            <!-- ===== SẢN PHẨM NGẪU NHIÊN (hiển thị mặc định) ===== -->
+            
+            <?php /* --- VÒNG LẶP SẢN PHẨM NGẪU NHIÊN (TẤT CẢ) --- */ ?>
             <?php foreach ($randomProducts as $product): ?>
-                <a href="Chitiet.php?id=<?= $product['MaSanPham'] ?>" class="product-link">
-                    <div class="product-card random-pool" data-category="all">
+                <a href="Chitiet.php?id=<?= $product['MaSanPham'] ?>" class="product-link random-pool" data-category="all">
+                    <div class="product-card">
                         <span class="product-badge">Mới</span>
                         <div class="product-img">
                             <img src="images/<?= htmlspecialchars($product['HinhAnh']) ?>" alt="<?= htmlspecialchars($product['TenSanPham']) ?>">
@@ -95,10 +93,10 @@ if (!is_array($allProducts)) $allProducts = [];
                 </a>
             <?php endforeach; ?>
 
-            <!-- ===== TOÀN BỘ SẢN PHẨM (ẩn mặc định, dùng cho lọc) ===== -->
+            <?php /* --- VÒNG LẶP BỘ LỌC DANH MỤC --- */ ?>
             <?php foreach ($allProducts as $product): ?>
-                <a href="Chitiet.php?id=<?= $product['MaSanPham'] ?>" class="product-link">
-                    <div class="product-card filter-pool" data-category="<?= htmlspecialchars($product['MaDanhMuc']) ?>" style="display: none;">
+                <a href="Chitiet.php?id=<?= $product['MaSanPham'] ?>" class="product-link filter-pool" data-category="<?= htmlspecialchars($product['MaDanhMuc']) ?>" style="display: none;">
+                    <div class="product-card">
                         <span class="product-badge">Nổi bật</span>
                         <div class="product-img">
                             <img src="images/<?= htmlspecialchars($product['HinhAnh']) ?>" alt="<?= htmlspecialchars($product['TenSanPham']) ?>">
@@ -122,6 +120,7 @@ if (!is_array($allProducts)) $allProducts = [];
                     </div>
                 </a>
             <?php endforeach; ?>
+
         <?php endif; ?>
     </div>
 </div>

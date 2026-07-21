@@ -96,3 +96,11 @@
         display: none;
     }
 }
+
+.admin-header .header-left h2#pageTitle {
+    display: block !important;
+    visibility: visible !important;
+    color: #27ae60 !important; /* Đổi thành màu chữ bạn muốn hiển thị trên Header */
+    font-size: 20px;
+    margin-left: 15px;
+}

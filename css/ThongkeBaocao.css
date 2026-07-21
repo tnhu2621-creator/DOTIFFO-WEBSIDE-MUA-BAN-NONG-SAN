@@ -390,3 +390,25 @@ a { text-decoration: none; color: inherit; }
     .recent-code, .recent-customer, .recent-amount { min-width: auto; font-size: 0.7rem; }
     .recent-amount { text-align: left; }
 }
+
+.btn-export {
+    background: #008919;
+    color: #fff;
+    border: none;
+    padding: 6px 18px;
+    border-radius: 50px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.btn-export:hover {
+    background: #006e14;
+    transform: translateY(-1px);
+}
+.btn-export i {
+    font-size: 1rem;
+}

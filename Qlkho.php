@@ -1,7 +1,6 @@
 <?php
 include 'config/database.php';
-include 'admin/menu.php';
-include 'admin/header.php';
+// ❌ XÓA BỎ 2 DÒNG INCLUDE MENU VÀ HEADER Ở ĐÂY
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -27,10 +26,14 @@ include 'admin/header.php';
     <div class="admin-wrapper">
 
         <!-- ===== SIDEBAR ===== -->
-        <div id="admin-layout-placeholder"></div>
+        <!--  ĐÃ THÊM: Thay thế placeholder bằng menu chuẩn -->
+        <?php include 'admin/menu.php'; ?>
 
         <!-- ===== MAIN CONTENT ===== -->
         <main class="main-content">
+            
+            <!--  ĐÃ THÊM: Header nằm đúng vị trí đầu của vùng nội dung chính -->
+            <?php include 'admin/header.php'; ?>
 
             <!-- ===== CONTENT ===== -->
             <div class="content-area">
@@ -59,10 +62,10 @@ include 'admin/header.php';
                         </div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-icon"><i class="fas fa-times-circle"></i></div>
+                        <div class="stat-icon"><i class="fas fa-hourglass-half"></i></div>
                         <div class="stat-info">
-                            <h3 id="outOfStockCount">0</h3>
-                            <p>Hết hàng</p>
+                            <h3 id="expiringCount">0</h3>
+                            <p>Sắp hết hạn</p>
                         </div>
                     </div>
                 </div>
@@ -111,7 +114,6 @@ include 'admin/header.php';
                                     <th>Tên sản phẩm</th>
                                     <th>Danh mục</th>
                                     <th>Tồn kho</th>
-                                    <!-- ĐÃ SỬA: Ngưỡng cảnh báo → Giá nhập -->
                                     <th>Giá nhập</th>
                                     <th>Trạng thái</th>
                                     <th>Thao tác</th>

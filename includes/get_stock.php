@@ -13,7 +13,8 @@ try {
             sp.TenSanPham AS name,
             dm.TenDanhMuc AS category,
             COALESCE(SUM(kh.SoLuongTon), 0) AS quantity,
-            COALESCE(AVG(kh.GiaNhap), 0) AS GiaNhap
+            COALESCE(AVG(kh.GiaNhap), 0) AS GiaNhap,
+            MIN(kh.NgayHetHan) AS NgayHetHan -- Lấy hạn sử dụng gần nhất của sản phẩm
         FROM sanpham sp
         LEFT JOIN danhmuc dm ON sp.MaDanhMuc = dm.MaDanhMuc
         LEFT JOIN khohang kh ON sp.MaSanPham = kh.MaSanPham
@@ -26,11 +27,12 @@ try {
 
     $data = array_map(function($row) {
         return [
-            'id'       => $row['id'],
-            'name'     => $row['name'],
-            'category' => $row['category'] ?? 'Chưa phân loại',
-            'quantity' => (int)$row['quantity'],
-            'GiaNhap'  => (float)$row['GiaNhap']
+            'id'         => $row['id'],
+            'name'       => $row['name'],
+            'category'   => $row['category'] ?? 'Chưa phân loại',
+            'quantity'   => (int)$row['quantity'],
+            'GiaNhap'    => (float)$row['GiaNhap'],
+            'NgayHetHan' => $row['NgayHetHan'] ?? null // 👈 Đã thêm trường này
         ];
     }, $rows);
 

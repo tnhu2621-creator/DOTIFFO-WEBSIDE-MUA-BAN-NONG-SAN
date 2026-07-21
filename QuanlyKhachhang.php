@@ -154,9 +154,7 @@ if ($action) {
     exit;
 }
 
-// ===== GIAO DIỆN =====
-include 'admin/menu.php';
-include 'admin/header.php';
+// ===== ĐÃ XÓA 2 DÒNG INCLUDE SAI VỊ TRÍ TẠI ĐÂY =====
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -178,8 +176,15 @@ include 'admin/header.php';
 <body>
 
     <div class="admin-wrapper">
-        <div id="admin-layout-placeholder"></div>
+        
+        <!-- ĐÃ THÊM: Thay thế placeholder bằng menu chuẩn -->
+        <?php include 'admin/menu.php'; ?>
+
         <main class="main-content">
+            
+            <!-- ĐÃ THÊM: Đưa header vào đúng vị trí đầu khu vực main-content -->
+            <?php include 'admin/header.php'; ?>
+
             <div class="content-area">
 
                 <!-- Stats -->

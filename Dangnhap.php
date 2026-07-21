@@ -2,6 +2,13 @@
 session_start();
 require_once 'config/database.php';
 
+// Xử lý logout khi có tham số ?logout=1
+if (isset($_GET['logout'])) {
+    session_destroy();
+    header('Location: Dangnhap.php');
+    exit;
+}
+
 // Nếu đã đăng nhập, chuyển hướng theo vai trò
 if (isset($_SESSION['user_id'])) {
     $role = $_SESSION['user_role'] ?? 0;

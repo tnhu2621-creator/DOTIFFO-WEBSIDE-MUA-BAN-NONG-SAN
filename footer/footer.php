@@ -26,9 +26,9 @@
             <div class="footer-col">
                 <h4>Hỗ trợ</h4>
                 <ul>
-                    <li><a href="#">Chính sách đổi trả</a></li>
+                    <li><a href="footer/ChinhSachDoiTra.php">Chính sách đổi trả</a></li>
                     <li><a href="#">Giao hàng &amp; vận chuyển</a></li>
-                    <li><a href="#">Hướng dẫn mua hàng</a></li>
+                    <li><a href="footer/HuongDanMuaHang.php">Hướng dẫn mua hàng</a></li>
                     <li><a href="#">Câu hỏi thường gặp</a></li>
                 </ul>
             </div>

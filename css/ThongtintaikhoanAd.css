@@ -618,3 +618,76 @@ a { text-decoration: none; color: inherit; }
     .avatar-option { font-size: 1.5rem; }
     .btn-primary { width: 100%; text-align: center; }
 }
+
+/* ===== BREADCRUMB BAR ===== */
+.breadcrumb-bar {
+    background: var(--white);
+    padding: 12px 0;
+    border-bottom: 1px solid var(--gray-200);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    margin-bottom: 20px;
+}
+
+.breadcrumb-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+}
+
+.btn-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--green-dark);
+    font-weight: 500;
+    transition: var(--transition);
+    text-decoration: none;
+}
+
+.btn-back:hover {
+    color: var(--pink);
+}
+
+.breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.9rem;
+    color: var(--gray-600);
+}
+
+.breadcrumb a {
+    color: var(--green-dark);
+    transition: var(--transition);
+    text-decoration: none;
+}
+
+.breadcrumb a:hover {
+    color: var(--pink);
+}
+
+.breadcrumb span {
+    color: var(--gray-400);
+}
+
+/* ===== CONTAINER ===== */
+.account-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 24px 40px;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+    .breadcrumb-container {
+        flex-direction: column-reverse;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    .breadcrumb {
+        font-size: 0.8rem;
+    }
+}

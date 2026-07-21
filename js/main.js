@@ -1,9 +1,10 @@
 document.addEventListener("DOMContentLoaded", function () {
     const filterButtons = document.querySelectorAll(".filter-btn");
-    const randomItems = document.querySelectorAll(".product-card.random-pool");
-    const filterItems = document.querySelectorAll(".product-card.filter-pool");
+    
+    // ĐÃ SỬA: Chọn .product-link thay vì .product-card để ẩn/hiển thị toàn bộ ô lưới
+    const randomItems = document.querySelectorAll(".product-link.random-pool");
+    const filterItems = document.querySelectorAll(".product-link.filter-pool");
 
-    // ---- XỬ LÝ LỌC SẢN PHẨM (giữ nguyên) ----
     filterButtons.forEach(button => {
         button.addEventListener("click", function () {
             filterButtons.forEach(btn => btn.classList.remove("active"));
@@ -29,19 +30,22 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 
-    // ---- ĐẢM BẢO CHUYỂN HƯỚNG KHI CLICK VÀO LINK SẢN PHẨM ----
+    // Giữ nguyên đoạn xử lý click loại trừ nút mua hàng và yêu thích
     document.querySelectorAll('.product-link').forEach(link => {
         link.addEventListener('click', function(e) {
-            // Nếu click vào nút "Thêm giỏ" hoặc "Yêu thích" thì bỏ qua
             if (e.target.closest('.btn-cart') || e.target.closest('.btn-wish')) {
                 return;
             }
-            // Lấy href và chuyển hướng (nếu href có giá trị)
             const href = this.getAttribute('href');
             if (href && href !== '#') {
                 window.location.href = href;
-                e.preventDefault(); // ngăn hành vi mặc định (để an toàn)
+                e.preventDefault();
             }
         });
     });
+
+    const activeFilter = document.querySelector('.filter-btn.active');
+    if (activeFilter) {
+        activeFilter.click();
+    }
 });

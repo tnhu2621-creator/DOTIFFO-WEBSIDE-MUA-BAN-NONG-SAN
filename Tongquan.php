@@ -20,7 +20,7 @@ try {
     $stmt = $pdo->query("SELECT COUNT(*) FROM nguoidung");
     $totalCustomers = $stmt->fetchColumn() ?: 0;
 } catch (PDOException $e) {
-    $totalCustomers = 0; // nếu bảng chưa có
+    $totalCustomers = 0; 
 }
 
 // Tổng sản phẩm (nếu có bảng sanpham)
@@ -31,7 +31,7 @@ try {
     $totalProducts = 0;
 }
 
-// 5 đơn hàng gần nhất – kèm tên khách hàng (nếu có join)
+// 5 đơn hàng gần nhất
 $stmt = $pdo->query("
     SELECT d.MaDonHang, d.NgayDat, d.TongTien, d.TrangThai, n.HoTen AS customer_name
     FROM donhang d
@@ -54,16 +54,18 @@ for ($i = 11; $i >= 0; $i--) {
     $data[] = (float) $stmt->fetchColumn() ?: 0;
 }
 
-// Top sản phẩm (giả định - có thể thay thế sau)
+// Top sản phẩm
 $productLabels = ['Trà Sen', 'Xoài Cát', 'Mật ong', 'Gạo Nàng', 'Ánh Trà'];
 $productData = [120, 90, 65, 50, 40];
+
+// ❌ XÓA BỎ 2 DÒNG INCLUDE Ở ĐÂY ĐỂ CHUYỂN XUỐNG DƯỚI
 ?>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DOTIFOOD - Quản trị</title>
+    <title>DOTIFOOD - Tổng quan</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -73,13 +75,16 @@ $productData = [120, 90, 65, 50, 40];
     <link rel="stylesheet" href="css/Tongquan.css" />
     <link rel="stylesheet" href="admin/menu.css" />
     <link rel="stylesheet" href="admin/header.css" />
-    
 </head>
 <body>
     <div class="admin-wrapper">
-        <?php include 'admin/menu.php'; ?>
+        <!--  ĐÃ THÊM: Menu sidebar nằm đúng cấu trúc -->
+        <?php include 'admin/menu.php'; ?> 
+        
         <main class="main-content">
-            <?php include 'admin/header.php'; ?>
+            <!--  ĐÃ THÊM: Header nằm đúng cấu trúc phía trên vùng nội dung -->
+            <?php include 'admin/header.php'; ?> 
+    
             <div class="content-area" id="contentArea">
                 <div class="page-content active" id="page-dashboard">
                     <div class="stats-grid">

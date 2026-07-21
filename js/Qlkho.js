@@ -13,17 +13,41 @@
     let totalProductsEl = document.getElementById('totalProducts');
     let totalStockEl = document.getElementById('totalStock');
     let lowStockCountEl = document.getElementById('lowStockCount');
-    let outOfStockCountEl = document.getElementById('outOfStockCount');
+    let expiringCountEl = document.getElementById('expiringCount'); // Thống kê Sắp hết hạn
     let prevPageBtn = document.getElementById('prevPage');
     let nextPageBtn = document.getElementById('nextPage');
     let pageInfo = document.getElementById('pageInfo');
     let searchInput = document.getElementById('searchInput');
 
-    // ===== HÀM XÁC ĐỊNH TRẠNG THÁI =====
+    // ===== HÀM XÁC ĐỊNH TRẠNG THÁI TỒN KHO =====
     function getStatus(quantity) {
         if (quantity <= 0) return { text: 'Hết hàng', class: 'status-danger' };
         if (quantity <= 10) return { text: 'Sắp hết hàng', class: 'status-warning' };
         return { text: 'Đủ hàng', class: 'status-success' };
+    }
+
+    // ===== HÀM XÁC ĐỊNH TRẠNG THÁI HẠN SỬ DỤNG (HSD) =====
+    function getExpiryStatus(expiryDateStr) {
+        if (!expiryDateStr) return { text: 'Không HSD', class: '', type: 'none' };
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const expDate = new Date(expiryDateStr);
+        expDate.setHours(0, 0, 0, 0);
+
+        if (isNaN(expDate.getTime())) return { text: 'Không HSD', class: '', type: 'none' };
+
+        const diffTime = expDate - today;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        if (diffDays < 0) {
+            return { text: `Đã hết hạn (${Math.abs(diffDays)} ngày)`, class: 'status-danger', type: 'expired' };
+        } else if (diffDays <= 7) { // 👈 Cảnh báo khi HSD còn từ 7 ngày trở xuống
+            return { text: `Sắp hết hạn (${diffDays} ngày)`, class: 'status-warning', type: 'expiring' };
+        } else {
+            return { text: `Còn HSD (${diffDays} ngày)`, class: 'status-success', type: 'ok' };
+        }
     }
 
     function formatPrice(price) {
@@ -70,17 +94,28 @@
             });
     }
 
-    // ===== UPDATE THỐNG KÊ =====
+    // ===== UPDATE THỐNG KÊ (ĐÃ SỬA LỖI DOM REF) =====
     function updateStats() {
+        if (!expiringCountEl) expiringCountEl = document.getElementById('expiringCount');
+        if (!totalProductsEl) totalProductsEl = document.getElementById('totalProducts');
+        if (!totalStockEl) totalStockEl = document.getElementById('totalStock');
+        if (!lowStockCountEl) lowStockCountEl = document.getElementById('lowStockCount');
+
         const total = stockData.length;
         const totalStock = stockData.reduce((sum, item) => sum + (item.quantity || 0), 0);
         const lowStock = stockData.filter(item => item.quantity > 0 && item.quantity <= 10).length;
-        const outOfStock = stockData.filter(item => item.quantity <= 0).length;
+
+        // 🎯 Đếm số lượng sản phẩm SẮP HẾT HẠN hoặc ĐÃ HẾT HẠN
+        const expiringCount = stockData.filter(item => {
+            const expiryDateRaw = item.NgayHetHan || item.ngay_het_han;
+            const expiry = getExpiryStatus(expiryDateRaw);
+            return expiry.type === 'expiring' || expiry.type === 'expired';
+        }).length;
 
         if (totalProductsEl) totalProductsEl.textContent = total;
         if (totalStockEl) totalStockEl.textContent = totalStock;
         if (lowStockCountEl) lowStockCountEl.textContent = lowStock;
-        if (outOfStockCountEl) outOfStockCountEl.textContent = outOfStock;
+        if (expiringCountEl) expiringCountEl.textContent = expiringCount;
     }
 
     // ===== LỌC DỮ LIỆU =====
@@ -90,10 +125,23 @@
         const statusFilter = filterStatus ? filterStatus.value : '';
 
         return stockData.filter(item => {
-            const matchName = item.name.toLowerCase().includes(keyword);
+            const matchName = (item.name || '').toLowerCase().includes(keyword) || (item.id || '').toString().toLowerCase().includes(keyword);
             const matchCategory = !category || category === 'all' || item.category === category;
-            const status = getStatus(item.quantity).text;
-            const matchStatus = !statusFilter || statusFilter === 'all' || status === statusFilter;
+            
+            const stockStatus = getStatus(item.quantity).text;
+            const expiry = getExpiryStatus(item.NgayHetHan || item.ngay_het_han);
+
+            let matchStatus = true;
+            if (statusFilter && statusFilter !== 'all') {
+                if (statusFilter === 'expiring' || statusFilter === 'sap-het-han-hsd') {
+                    matchStatus = expiry.type === 'expiring';
+                } else if (statusFilter === 'expired' || statusFilter === 'het-han-hsd') {
+                    matchStatus = expiry.type === 'expired';
+                } else {
+                    matchStatus = stockStatus === statusFilter;
+                }
+            }
+
             return matchName && matchCategory && matchStatus;
         });
     }
@@ -136,14 +184,38 @@
         pageItems.forEach(item => {
             const status = getStatus(item.quantity);
             const giaNhap = item.GiaNhap || 0;
+            const expiryDateRaw = item.NgayHetHan || item.ngay_het_han;
+            const expiry = getExpiryStatus(expiryDateRaw);
+
+            // Dòng hiển thị ngày HSD dưới tên SP
+            let expiryTextSub = '';
+            if (expiryDateRaw) {
+                const formattedDate = new Date(expiryDateRaw).toLocaleDateString('vi-VN');
+                expiryTextSub = `<small style="display:block; color:#6b7280; font-size:0.78rem; margin-top:2px;"><i class="far fa-calendar-alt"></i> HSD: ${formattedDate}</small>`;
+            }
+
+            // Nhãn cảnh báo HSD
+            let expiryBadge = '';
+            if (expiry.type === 'expired') {
+                expiryBadge = `<div style="margin-top:4px;"><span class="status status-danger" style="font-size:0.75rem;"><i class="fas fa-exclamation-circle"></i> ${expiry.text}</span></div>`;
+            } else if (expiry.type === 'expiring') {
+                expiryBadge = `<div style="margin-top:4px;"><span class="status status-warning" style="font-size:0.75rem;"><i class="fas fa-clock"></i> ${expiry.text}</span></div>`;
+            }
+
             html += `
                 <tr>
                     <td>#${String(item.id).padStart(3, '0')}</td>
-                    <td><strong>${item.name}</strong></td>
+                    <td>
+                        <strong>${item.name}</strong>
+                        ${expiryTextSub}
+                    </td>
                     <td>${item.category}</td>
                     <td>${item.quantity}</td>
                     <td>${formatPrice(giaNhap)}</td>
-                    <td><span class="status ${status.class}">${status.text}</span></td>
+                    <td>
+                        <span class="status ${status.class}">${status.text}</span>
+                        ${expiryBadge}
+                    </td>
                     <td>
                         <button class="action-btn edit" onclick="openAdjustModal('${item.id}')"><i class="fas fa-edit"></i></button>
                         <button class="action-btn history" onclick="openHistoryModal('${item.id}')"><i class="fas fa-clock"></i></button>
@@ -157,7 +229,7 @@
 
     // ===== MỞ MODAL ĐIỀU CHỈNH =====
     window.openAdjustModal = function(id) {
-        const item = stockData.find(p => p.id === id);
+        const item = stockData.find(p => String(p.id) === String(id));
         if (!item) return;
         document.getElementById('adjustProductId').value = item.id;
         document.getElementById('adjustProductName').value = item.name;
@@ -238,7 +310,7 @@
             });
     };
 
-    // ===== XUẤT EXCEL CÓ ĐỊNH DẠNG (FONT TIMES NEW ROMAN) =====
+    // ===== XUẤT EXCEL =====
     function exportExcel() {
         const filtered = getFilteredData();
         if (filtered.length === 0) {
@@ -246,7 +318,6 @@
             return;
         }
 
-        // Tạo bảng HTML với CSS inline để Excel hiểu
         let htmlContent = `
             <html xmlns:o="urn:schemas-microsoft-com:office:office" 
                   xmlns:x="urn:schemas-microsoft-com:office:excel" 
@@ -268,75 +339,21 @@
                 </xml>
                 <![endif]-->
                 <style>
-                    /* Định dạng chung: Times New Roman, cỡ chữ 12 */
-                    body {
-                        font-family: 'Times New Roman', serif;
-                        font-size: 12pt;
-                    }
-                    table {
-                        border-collapse: collapse;
-                        width: 100%;
-                        font-family: 'Times New Roman', serif;
-                        font-size: 12pt;
-                    }
-                    th, td {
-                        border: 1px solid #ddd;
-                        padding: 6px 10px;
-                        text-align: left;
-                        vertical-align: middle;
-                        font-family: 'Times New Roman', serif;
-                        font-size: 12pt;
-                    }
-                    th {
-                        background-color: #008919;
-                        color: #ffffff;
-                        font-weight: 700;
-                        text-align: center;
-                        border-color: #006e14;
-                    }
-                    td {
-                        background-color: #ffffff;
-                    }
-                    .status-ok {
-                        color: #155724;
-                        background-color: #d4edda;
-                        font-weight: 600;
-                        padding: 2px 8px;
-                        border-radius: 12px;
-                    }
-                    .status-warning {
-                        color: #856404;
-                        background-color: #fff3cd;
-                        font-weight: 600;
-                        padding: 2px 8px;
-                        border-radius: 12px;
-                    }
-                    .status-danger {
-                        color: #721c24;
-                        background-color: #f8d7da;
-                        font-weight: 600;
-                        padding: 2px 8px;
-                        border-radius: 12px;
-                    }
-                    .price {
-                        text-align: right;
-                        font-weight: 500;
-                    }
-                    .text-center {
-                        text-align: center;
-                    }
-                    /* Tiêu đề chính: cỡ chữ 15, Times New Roman */
-                    .header-title {
-                        font-size: 15pt;
-                        font-weight: 700;
-                        color: #008919;
-                        margin-bottom: 10px;
-                        font-family: 'Times New Roman', serif;
-                    }
+                    body { font-family: 'Times New Roman', serif; font-size: 12pt; }
+                    table { border-collapse: collapse; width: 100%; font-family: 'Times New Roman', serif; font-size: 12pt; }
+                    th, td { border: 1px solid #ddd; padding: 6px 10px; text-align: left; vertical-align: middle; font-family: 'Times New Roman', serif; font-size: 12pt; }
+                    th { background-color: #008919; color: #ffffff; font-weight: 700; text-align: center; border-color: #006e14; }
+                    td { background-color: #ffffff; }
+                    .status-ok { color: #155724; background-color: #d4edda; font-weight: 600; padding: 2px 8px; }
+                    .status-warning { color: #856404; background-color: #fff3cd; font-weight: 600; padding: 2px 8px; }
+                    .status-danger { color: #721c24; background-color: #f8d7da; font-weight: 600; padding: 2px 8px; }
+                    .price { text-align: right; font-weight: 500; }
+                    .text-center { text-align: center; }
+                    .header-title { font-size: 15pt; font-weight: 700; color: #008919; margin-bottom: 10px; font-family: 'Times New Roman', serif; }
                 </style>
             </head>
             <body>
-                <div class="header-title">📦 DANH SÁCH TỒN KHO</div>
+                <div class="header-title">📦 DANH SÁCH TỒN KHO VÀ HẠN SỬ DỤNG</div>
                 <p><strong>Ngày xuất:</strong> ${new Date().toLocaleDateString('vi-VN')}</p>
                 <p><strong>Tổng số sản phẩm:</strong> ${filtered.length}</p>
                 <br/>
@@ -348,7 +365,9 @@
                             <th>Danh mục</th>
                             <th>Tồn kho</th>
                             <th>Giá nhập</th>
-                            <th>Trạng thái</th>
+                            <th>Hạn sử dụng</th>
+                            <th>Trạng thái Tồn kho</th>
+                            <th>Trạng thái HSD</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -359,6 +378,14 @@
             const statusClass = status.text === 'Đủ hàng' ? 'status-ok' : 
                                (status.text === 'Sắp hết hàng' ? 'status-warning' : 'status-danger');
             const giaNhap = item.GiaNhap || 0;
+            const expiryDateRaw = item.NgayHetHan || item.ngay_het_han;
+            const expiry = getExpiryStatus(expiryDateRaw);
+            
+            const expFormatted = expiryDateRaw ? new Date(expiryDateRaw).toLocaleDateString('vi-VN') : '—';
+            let expClass = 'status-ok';
+            if (expiry.type === 'expired') expClass = 'status-danger';
+            else if (expiry.type === 'expiring') expClass = 'status-warning';
+
             htmlContent += `
                 <tr>
                     <td class="text-center">${item.id}</td>
@@ -366,7 +393,9 @@
                     <td>${item.category}</td>
                     <td class="text-center">${item.quantity}</td>
                     <td class="price">${formatPrice(giaNhap)}</td>
+                    <td class="text-center">${expFormatted}</td>
                     <td><span class="${statusClass}">${status.text}</span></td>
+                    <td><span class="${expClass}">${expiry.text}</span></td>
                 </tr>
             `;
         });
@@ -380,10 +409,7 @@
             </html>
         `;
 
-        // Tạo blob và tải file
-        const blob = new Blob([htmlContent], { 
-            type: 'application/vnd.ms-excel;charset=utf-8' 
-        });
+        const blob = new Blob([htmlContent], { type: 'application/vnd.ms-excel;charset=utf-8' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -437,64 +463,82 @@
     }
 
     // ===== SỰ KIỆN MODAL ĐIỀU CHỈNH =====
-    document.getElementById('modalSave').addEventListener('click', saveAdjustment);
-    document.getElementById('modalCancel').addEventListener('click', function() {
+    const modalSave = document.getElementById('modalSave');
+    if (modalSave) modalSave.addEventListener('click', saveAdjustment);
+
+    const modalCancel = document.getElementById('modalCancel');
+    if (modalCancel) modalCancel.addEventListener('click', function() {
         document.getElementById('adjustModal').classList.remove('open');
     });
-    document.getElementById('modalClose').addEventListener('click', function() {
+
+    const modalClose = document.getElementById('modalClose');
+    if (modalClose) modalClose.addEventListener('click', function() {
         document.getElementById('adjustModal').classList.remove('open');
     });
-    document.getElementById('adjustModal').addEventListener('click', function(e) {
+
+    const adjustModal = document.getElementById('adjustModal');
+    if (adjustModal) adjustModal.addEventListener('click', function(e) {
         if (e.target === this) this.classList.remove('open');
     });
 
     // ===== MODAL LỊCH SỬ =====
-    document.getElementById('historyModalClose').addEventListener('click', function() {
+    const historyModalClose = document.getElementById('historyModalClose');
+    if (historyModalClose) historyModalClose.addEventListener('click', function() {
         document.getElementById('historyModal').classList.remove('open');
     });
-    document.getElementById('historyModalCancel').addEventListener('click', function() {
+
+    const historyModalCancel = document.getElementById('historyModalCancel');
+    if (historyModalCancel) historyModalCancel.addEventListener('click', function() {
         document.getElementById('historyModal').classList.remove('open');
     });
-    document.getElementById('historyModal').addEventListener('click', function(e) {
+
+    const historyModal = document.getElementById('historyModal');
+    if (historyModal) historyModal.addEventListener('click', function(e) {
         if (e.target === this) this.classList.remove('open');
     });
 
     // ===== NHẬP KHO =====
-    document.getElementById('addImportRow').addEventListener('click', function() {
-        const tbodyImport = document.getElementById('importTableBody');
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>
-                <select class="product-select" style="width:100%; padding:6px 10px; border:2px solid var(--gray-200); border-radius:var(--radius-sm); font-size:0.9rem;">
-                    <option value="">Chọn sản phẩm</option>
-                    ${stockData.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
-                </select>
-            </td>
-            <td><input type="number" class="qty-input" value="1" min="1" style="width:80px; padding:6px 10px; border:2px solid var(--gray-200); border-radius:var(--radius-sm); text-align:center;"></td>
-            <td><input type="number" class="price-input" value="0" min="0" step="1000" style="width:100px; padding:6px 10px; border:2px solid var(--gray-200); border-radius:var(--radius-sm); text-align:right;"></td>
-            <td class="total-row">0 đ</td>
-            <td><button type="button" class="remove-row"><i class="fas fa-trash-alt"></i></button></td>
-        `;
-        tbodyImport.appendChild(row);
-        updateImportTotals();
-        attachRowEvents(row);
-    });
+    const addImportRowBtn = document.getElementById('addImportRow');
+    if (addImportRowBtn) {
+        addImportRowBtn.addEventListener('click', function() {
+            const tbodyImport = document.getElementById('importTableBody');
+            if (!tbodyImport) return;
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>
+                    <select class="product-select" style="width:100%; padding:6px 10px; border:2px solid var(--gray-200); border-radius:var(--radius-sm); font-size:0.9rem;">
+                        <option value="">Chọn sản phẩm</option>
+                        ${stockData.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
+                    </select>
+                </td>
+                <td><input type="number" class="qty-input" value="1" min="1" style="width:80px; padding:6px 10px; border:2px solid var(--gray-200); border-radius:var(--radius-sm); text-align:center;"></td>
+                <td><input type="number" class="price-input" value="0" min="0" step="1000" style="width:100px; padding:6px 10px; border:2px solid var(--gray-200); border-radius:var(--radius-sm); text-align:right;"></td>
+                <td class="total-row">0 đ</td>
+                <td><button type="button" class="remove-row"><i class="fas fa-trash-alt"></i></button></td>
+            `;
+            tbodyImport.appendChild(row);
+            updateImportTotals();
+            attachRowEvents(row);
+        });
+    }
 
     function attachRowEvents(row) {
         const qtyInput = row.querySelector('.qty-input');
         const priceInput = row.querySelector('.price-input');
         const removeBtn = row.querySelector('.remove-row');
 
-        qtyInput.addEventListener('input', updateImportTotals);
-        priceInput.addEventListener('input', updateImportTotals);
-        removeBtn.addEventListener('click', function() {
-            if (document.getElementById('importTableBody').children.length > 1) {
-                row.remove();
-                updateImportTotals();
-            } else {
-                showToast('Phải có ít nhất một dòng sản phẩm', 'error');
-            }
-        });
+        if (qtyInput) qtyInput.addEventListener('input', updateImportTotals);
+        if (priceInput) priceInput.addEventListener('input', updateImportTotals);
+        if (removeBtn) {
+            removeBtn.addEventListener('click', function() {
+                if (document.getElementById('importTableBody').children.length > 1) {
+                    row.remove();
+                    updateImportTotals();
+                } else {
+                    showToast('Phải có ít nhất một dòng sản phẩm', 'error');
+                }
+            });
+        }
     }
 
     function updateImportTotals() {
@@ -515,76 +559,100 @@
             }
         });
 
-        document.getElementById('totalItems').textContent = totalItems;
-        document.getElementById('totalQuantity').textContent = totalQty;
-        document.getElementById('totalValue').textContent = formatPrice(totalValue);
+        const totalItemsEl = document.getElementById('totalItems');
+        const totalQuantityEl = document.getElementById('totalQuantity');
+        const totalValueEl = document.getElementById('totalValue');
+
+        if (totalItemsEl) totalItemsEl.textContent = totalItems;
+        if (totalQuantityEl) totalQuantityEl.textContent = totalQty;
+        if (totalValueEl) totalValueEl.textContent = formatPrice(totalValue);
     }
 
-    document.getElementById('btnAddStock').addEventListener('click', function() {
-        const now = new Date();
-        const code = 'NK' + now.getFullYear() + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0') + '-' + String(Date.now()).slice(-4);
-        document.getElementById('importCode').value = code;
-        document.getElementById('importDate').value = now.toISOString().slice(0,10);
-        const tbody = document.getElementById('importTableBody');
-        if (tbody.children.length === 0) {
-            document.getElementById('addImportRow').click();
-        }
-        document.getElementById('importModal').classList.add('open');
+    const btnAddStock = document.getElementById('btnAddStock');
+    if (btnAddStock) {
+        btnAddStock.addEventListener('click', function() {
+            const now = new Date();
+            const code = 'NK' + now.getFullYear() + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0') + '-' + String(Date.now()).slice(-4);
+            
+            const importCode = document.getElementById('importCode');
+            const importDate = document.getElementById('importDate');
+            if (importCode) importCode.value = code;
+            if (importDate) importDate.value = now.toISOString().slice(0,10);
+
+            const tbodyImport = document.getElementById('importTableBody');
+            if (tbodyImport && tbodyImport.children.length === 0) {
+                const addRowBtn = document.getElementById('addImportRow');
+                if (addRowBtn) addRowBtn.click();
+            }
+
+            const importModal = document.getElementById('importModal');
+            if (importModal) importModal.classList.add('open');
+        });
+    }
+
+    const importModalClose = document.getElementById('importModalClose');
+    if (importModalClose) importModalClose.addEventListener('click', function() {
+        document.getElementById('importModal').classList.remove('open');
     });
 
-    document.getElementById('importModalClose').addEventListener('click', function() {
+    const importModalCancel = document.getElementById('importModalCancel');
+    if (importModalCancel) importModalCancel.addEventListener('click', function() {
         document.getElementById('importModal').classList.remove('open');
     });
-    document.getElementById('importModalCancel').addEventListener('click', function() {
-        document.getElementById('importModal').classList.remove('open');
-    });
-    document.getElementById('importModal').addEventListener('click', function(e) {
+
+    const importModal = document.getElementById('importModal');
+    if (importModal) importModal.addEventListener('click', function(e) {
         if (e.target === this) this.classList.remove('open');
     });
 
-    document.getElementById('importModalSave').addEventListener('click', function() {
-        const rows = document.querySelectorAll('#importTableBody tr');
-        const items = [];
-        rows.forEach(row => {
-            const select = row.querySelector('.product-select');
-            const qtyInput = row.querySelector('.qty-input');
-            const priceInput = row.querySelector('.price-input');
-            if (select && qtyInput && priceInput) {
-                const id = select.value;
-                const qty = parseInt(qtyInput.value) || 0;
-                const price = parseFloat(priceInput.value) || 0;
-                if (id && qty > 0) {
-                    items.push({ id, quantity: qty, price });
+    const importModalSave = document.getElementById('importModalSave');
+    if (importModalSave) {
+        importModalSave.addEventListener('click', function() {
+            const rows = document.querySelectorAll('#importTableBody tr');
+            const items = [];
+            rows.forEach(row => {
+                const select = row.querySelector('.product-select');
+                const qtyInput = row.querySelector('.qty-input');
+                const priceInput = row.querySelector('.price-input');
+                if (select && qtyInput && priceInput) {
+                    const id = select.value;
+                    const qty = parseInt(qtyInput.value) || 0;
+                    const price = parseFloat(priceInput.value) || 0;
+                    if (id && qty > 0) {
+                        items.push({ id, quantity: qty, price });
+                    }
                 }
-            }
-        });
+            });
 
-        if (items.length === 0) {
-            showToast('Vui lòng thêm ít nhất một sản phẩm hợp lệ', 'error');
-            return;
-        }
-
-        fetch('includes/import_stock.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ items })
-        })
-        .then(res => res.json())
-        .then(result => {
-            if (result.success) {
-                document.getElementById('importModal').classList.remove('open');
-                loadStockData();
-                showToast(result.message);
-                document.getElementById('importTableBody').innerHTML = '';
-                document.getElementById('addImportRow').click();
-            } else {
-                showToast(result.message, 'error');
+            if (items.length === 0) {
+                showToast('Vui lòng thêm ít nhất một sản phẩm hợp lệ', 'error');
+                return;
             }
-        })
-        .catch(err => {
-            showToast('Lỗi kết nối đến server', 'error');
+
+            fetch('includes/import_stock.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ items })
+            })
+            .then(res => res.json())
+            .then(result => {
+                if (result.success) {
+                    document.getElementById('importModal').classList.remove('open');
+                    loadStockData();
+                    showToast(result.message);
+                    const tbodyImport = document.getElementById('importTableBody');
+                    if (tbodyImport) tbodyImport.innerHTML = '';
+                    const addRowBtn = document.getElementById('addImportRow');
+                    if (addRowBtn) addRowBtn.click();
+                } else {
+                    showToast(result.message, 'error');
+                }
+            })
+            .catch(err => {
+                showToast('Lỗi kết nối đến server', 'error');
+            });
         });
-    });
+    }
 
     // ===== KHỞI TẠO =====
     document.addEventListener('DOMContentLoaded', function() {
@@ -596,6 +664,7 @@
         filterCategory = document.getElementById('filter-danhmuc');
         filterStatus = document.getElementById('filter-trangthai');
         searchInput = document.getElementById('searchInput');
+
         if (searchInput && !searchInput._listener) {
             searchInput.addEventListener('input', function() {
                 currentPage = 1;
@@ -624,5 +693,5 @@
         }
     });
 
-    console.log('📦 Quản lý kho đã sẵn sàng');
+    console.log('📦 Quản lý kho đã sẵn sàng (Đã cập nhật đếm Sắp hết hạn)');
 })();

@@ -25,7 +25,7 @@
                 <a href="QuanlyNhanvien.php" data-page="staff"><i class="fas fa-users-cog"></i><span>Quản lý nhân viên</span></a>
             </li>
             <li>
-                <a href="ThongtinKhachhang.php" data-page="customers"><i class="fas fa-user-friends"></i><span>Thông tin khách hàng</span></a>
+                <a href="QuanlyKhachhang.php" data-page="customers"><i class="fas fa-user-friends"></i><span>Thông tin khách hàng</span></a>
             </li>
             <li>
                 <a href="ThongkeBaocao.php" data-page="reports"><i class="fas fa-chart-bar"></i><span>Thống kê báo cáo</span></a>
@@ -34,7 +34,7 @@
     </nav>
 
     <div class="admin-sidebar-footer">
-        <a href="../Dangnhap.php" class="logout-btn">
+        <a href="Dangnhap.php?logout=1" class="logout-btn">
             <i class="fas fa-sign-out-alt"></i>
             <span>Đăng xuất</span>
         </a>
